@@ -14,6 +14,12 @@
 - Reuse existing code before adding abstractions or dependencies.
 - Keep canvases independent.
 - Validate authorization on the server; the client is not a security boundary.
+- After creating or modifying API routes, update the Swagger/OpenAPI definition and verify the docs endpoint.
+- Reuse `@trace/shared` contracts, `apiPaths`, and `apiRoutes`; do not hardcode duplicated API paths, enums, or payload shapes unless the external format requires it. Do not remove shared exports without checking all collaborator branches first.
+- Use Express 5 native async route handling; do not add an async wrapper unless a concrete compatibility need exists.
+- Remove unused dependencies, exports, and configuration instead of keeping them for possible future use.
+- Before deleting, renaming, or changing a shared export, file, dependency, route, schema, or contract: inspect all local references, check branch/worktree impact when available, and preserve compatibility unless the user explicitly approves the breaking change.
+- Do not apply audit cleanup findings automatically. Report them first and ask before removing anything that another collaborator or branch may use.
 - Draft edits do not create history versions.
 - Explicit Save creates one immutable version.
 - Editors and viewers can read version history; only owners can restore a version.
