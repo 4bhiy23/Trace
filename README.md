@@ -8,14 +8,14 @@ Trace is a project-based engineering workspace where teams can keep documentatio
 
 Each project can contain multiple **independent canvases**:
 
-| Canvas | Source / Model | Experience |
-|---|---|---|
-| Markdown | Markdown | CodeMirror editor + live preview |
-| DBML | DBML | Code editor + interactive ERD |
-| UML Class | PlantUML | Interactive graph editor |
-| UML Sequence | PlantUML | Timeline / lifeline editor |
-| Architecture | Visual JSON model | Visual-first diagram editor |
-| Flow | Mermaid | Code editor + interactive flow graph |
+| Canvas       | Source / Model    | Experience                           |
+| ------------ | ----------------- | ------------------------------------ |
+| Markdown     | Markdown          | CodeMirror editor + live preview     |
+| DBML         | DBML              | Code editor + interactive ERD        |
+| UML Class    | PlantUML          | Interactive graph editor             |
+| UML Sequence | PlantUML          | Timeline / lifeline editor           |
+| Architecture | Visual JSON model | Visual-first diagram editor          |
+| Flow         | Mermaid           | Code editor + interactive flow graph |
 
 Canvases are intentionally independent. Each has its own content, collaboration room, layout, and version history.
 

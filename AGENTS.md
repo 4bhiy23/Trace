@@ -19,6 +19,19 @@
 - Editors and viewers can read version history; only owners can restore a version.
 - Run the smallest relevant pnpm check after changes.
 
+## Commit checklist
+
+Before every commit, run the full repository checks from the root:
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm build
+```
+
+Do not commit while any check is failing. For focused changes, run the relevant package check as well. Never commit `.env`, secrets, build output, or database dumps. Follow `CONTRIBUTION.md` for branch, commit, and pull request workflow.
+
 ## Monorepo conventions
 
 - Keep product apps under `apps/*` and reusable code under `packages/*`.
