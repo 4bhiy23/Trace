@@ -17,6 +17,9 @@ Use one short-lived branch per feature or fix. Keep `main` stable.
 - Keep backend features under `apps/server/src/modules`.
 - Keep frontend features under `apps/web/src/modules`.
 - Never commit `.env`, secrets, build output, or database dumps.
+- Before deleting, renaming, or changing a shared export, file, dependency, route, schema, or contract, search all references and check with collaborators when another branch may use it.
+- Preserve compatibility by default. Get approval before making a breaking removal or rename.
+- Treat audit findings as suggestions; do not apply cleanup automatically when it may affect another contributor.
 
 ## Required checks before every commit
 

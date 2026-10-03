@@ -92,6 +92,24 @@ export type CanvasVersion = {
   createdAt: string;
 };
 
+// For backend use
+export const apiPaths = {
+  authHandler: "/api/auth/*splat",
+  authSignUpEmail: "/api/auth/sign-up/email",
+  authSignInEmail: "/api/auth/sign-in/email",
+  authGetSession: "/api/auth/get-session",
+  authSignOut: "/api/auth/sign-out",
+  projects: "/api/projects",
+  project: "/api/projects/:projectId",
+  members: "/api/projects/:projectId/members",
+  member: "/api/projects/:projectId/members/:userId",
+  canvases: "/api/projects/:projectId/canvases",
+  canvas: "/api/canvases/:canvasId",
+  versions: "/api/canvases/:canvasId/versions",
+  restore: "/api/canvases/:canvasId/versions/:versionId/restore",
+} as const;
+
+// For frontend use
 export const apiRoutes = {
   projects: "/api/projects",
   project: (projectId: string) => `/api/projects/${projectId}`,
@@ -106,7 +124,7 @@ export const apiRoutes = {
 export const projectCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
 });
-export const projectUpdateSchema = projectCreateSchema;
+export const projectUpdateSchema = projectCreateSchema.partial();
 
 export const memberInviteSchema = z.object({
   email: z.string().trim().email(),
