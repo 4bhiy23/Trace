@@ -2,8 +2,11 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-const envFile = fileURLToPath(new URL("../../../../.env", import.meta.url));
-if (existsSync(envFile)) process.loadEnvFile(envFile);
+const rootEnv = fileURLToPath(new URL("../../../../.env", import.meta.url));
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+
+const serverEnv = fileURLToPath(new URL("../../.env", import.meta.url));
+if (existsSync(serverEnv)) process.loadEnvFile(serverEnv);
 
 const envSchema = z.object({
   NODE_ENV: z
