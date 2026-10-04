@@ -38,7 +38,7 @@ export function TraceLogo({
         </svg>
       </div>
 
-      {/* Wordmark */}
+   
       {showWordmark && (
         <div className="flex items-center tracking-tight font-black text-2xl sm:text-3xl text-[var(--foreground)] font-sans">
           <span>TRACE</span>

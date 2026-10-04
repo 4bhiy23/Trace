@@ -59,7 +59,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    // If auth verification takes longer than 3.5 seconds, treat as unauthenticated
+    // If auth verification takes 3.5 seconds, treat unauthenticated
     const timer = setTimeout(() => {
       setTimedOut(true);
     }, 3500);

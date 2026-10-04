@@ -18,21 +18,21 @@ export function AuthPageLayout({
       {/* Background Doodles and Texture */}
       <AuthBackgroundDoodles />
 
-      {/* Top Bar with Logo & Theme Switcher */}
+      
       <header className="relative z-10 w-full px-6 pt-4 sm:pt-6 flex items-center justify-between max-w-7xl mx-auto">
-        <div className="w-10" /> {/* Spacer to balance theme toggle */}
+        <div className="w-10" /> 
         <TraceLogo />
         <div className="w-10 flex justify-end">
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Main Center Content */}
+    
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-3 sm:py-6">
         <AuthCard initialMode={initialMode} />
       </main>
 
-      {/* Bottom Spacer */}
+    
       <footer className="relative z-10 py-4 text-center" />
     </div>
   );
