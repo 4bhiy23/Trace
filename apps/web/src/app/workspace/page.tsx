@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthGuard } from "@/modules/auth/AuthGuard";
 import { WorkspaceView } from "@/modules/workspace/WorkspaceView";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function WorkspacePage() {
-  return <WorkspaceView />;
+  return (
+    <AuthGuard>
+      <WorkspaceView />
+    </AuthGuard>
+  );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutGrid,
   Lock,
@@ -8,8 +8,10 @@ import {
   Folder as FolderIcon,
   Plus,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 import { TraceLogo } from "@/modules/auth/TraceLogo";
+import { useAuth } from "@/modules/auth/AuthGuard";
 import { WorkspaceFolder } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -28,10 +30,21 @@ export function WorkspaceSidebar({
   onAddFolder,
   onOpenNewFileModal,
 }: WorkspaceSidebarProps) {
+  const { user, signOut } = useAuth();
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
-  const [teamName, setTeamName] = useState("User’s TEAM");
+  const [teamName, setTeamName] = useState(() => {
+    const name = user?.name || user?.email?.split("@")[0] || "User";
+    return `${name}’s TEAM`;
+  });
+
+  useEffect(() => {
+    if (user?.name || user?.email) {
+      const name = user.name || user.email.split("@")[0];
+      setTeamName(`${name}’s TEAM`);
+    }
+  }, [user]);
 
   const handleCreateFolder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,6 +269,35 @@ export function WorkspaceSidebar({
           </div>
         </button>
       </div>
+
+      {/* User profile & sign out */}
+      {user && (
+        <div className="px-3 pb-3">
+          <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-[11px] font-semibold text-white shrink-0 shadow-xs">
+                {(user.name || user.email || "U")[0].toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium text-[var(--foreground)] truncate">
+                  {user.name || "User"}
+                </div>
+                <div className="text-[10px] text-[var(--muted-foreground)] truncate">
+                  {user.email}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={signOut}
+              title="Sign Out"
+              className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
