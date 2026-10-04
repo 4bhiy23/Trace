@@ -3,7 +3,7 @@
 import React, { useRef, useEffect } from "react";
 import { Search, Send } from "lucide-react";
 import { FilterTab } from "./types";
-import { ThemeToggle } from "@/src/modules/auth/ThemeToggle";
+import { ThemeToggle } from "@/modules/auth/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceHeaderProps {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AuthPageLayout } from "@/src/modules/auth/AuthPageLayout";
+import { AuthPageLayout } from "@/modules/auth/AuthPageLayout";
 
 export const metadata: Metadata = {
   title: "Sign Up - Trace",

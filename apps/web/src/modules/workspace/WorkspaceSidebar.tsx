@@ -9,7 +9,7 @@ import {
   Plus,
   ChevronDown,
 } from "lucide-react";
-import { TraceLogo } from "@/src/modules/auth/TraceLogo";
+import { TraceLogo } from "@/modules/auth/TraceLogo";
 import { WorkspaceFolder } from "./types";
 import { cn } from "@/lib/utils";
 

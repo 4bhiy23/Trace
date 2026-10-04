@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { WorkspaceView } from "@/src/modules/workspace/WorkspaceView";
+import { WorkspaceView } from "@/modules/workspace/WorkspaceView";
 
 export const metadata: Metadata = {
-  title: "User’s TEAM Workspaces - Trace",
+  title: "All Files - Trace Workspace",
   description:
     "Collaborative workspace for technical documentation and engineering diagrams.",
 };
 
-export default function WorkspacePage() {
+export default function DashboardAllPage() {
   return <WorkspaceView />;
 }
