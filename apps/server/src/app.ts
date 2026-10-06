@@ -13,6 +13,9 @@ import { registerWorkspaceRoutes } from "./modules/workspaces/workspace.routes";
 import { requestLogger } from "./shared/logger";
 import { sendError } from "./shared/http/errors";
 
+/**
+ * Builds the Express app with API routes, middleware, and centralized error handling.
+ */
 export function createApp() {
   const app = express();
 

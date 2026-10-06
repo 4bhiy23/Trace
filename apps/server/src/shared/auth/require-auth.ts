@@ -23,6 +23,9 @@ export function requireAuth(
     .catch(next);
 }
 
+/**
+ * Returns the user set by authentication middleware, or throws 401 when absent.
+ */
 export const getCurrentUser = (response: Response) => {
   const user = response.locals.user as
     { id: string; name: string; email: string } | undefined;

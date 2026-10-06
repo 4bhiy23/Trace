@@ -10,6 +10,9 @@ import {
 } from "../../db/schema";
 import { HttpError } from "../../shared/http/errors";
 
+/**
+ * Builds a workspace audit record for an action on a project.
+ */
 const audit = (
   workspaceId: string,
   actorId: string,
@@ -17,6 +20,10 @@ const audit = (
   targetId: string,
 ) => ({ workspaceId, actorId, action, targetType: "project", targetId });
 
+/**
+ * Creates a workspace project and its audit entry in one transaction.
+ * Returns the project with editor access; callers must authorize the actor.
+ */
 export async function createProject(
   workspaceId: string,
   name: string,
@@ -34,6 +41,9 @@ export async function createProject(
   });
 }
 
+/**
+ * Lists workspace projects by latest update with access derived from the supplied role and editor grants.
+ */
 export async function listProjects(
   workspaceId: string,
   userId: string,
@@ -58,6 +68,10 @@ export async function listProjects(
   }));
 }
 
+/**
+ * Renames a project and records the actor in an audit entry atomically.
+ * Callers must authorize access and supply the project's workspace; missing projects raise 404.
+ */
 export async function updateProject(
   projectId: string,
   workspaceId: string,
@@ -78,6 +92,10 @@ export async function updateProject(
   });
 }
 
+/**
+ * Marks a project archived and writes an audit entry atomically.
+ * Callers must authorize access and supply the project's workspace; missing projects raise 404.
+ */
 export async function archiveProject(
   projectId: string,
   workspaceId: string,
@@ -96,6 +114,9 @@ export async function archiveProject(
   });
 }
 
+/**
+ * Lists workspace admins and members with explicit editor grants for the project.
+ */
 export function listProjectEditors(projectId: string) {
   return db
     .select({
@@ -129,6 +150,11 @@ export function listProjectEditors(projectId: string) {
     );
 }
 
+/**
+ * Grants project editing to a regular workspace member and returns their details.
+ * Callers must authorize access and supply the project's workspace.
+ * Missing members raise 404; existing grants and non-member roles raise 409.
+ */
 export async function addProjectEditor(
   projectId: string,
   workspaceId: string,
@@ -185,6 +211,10 @@ export async function addProjectEditor(
   });
 }
 
+/**
+ * Removes an explicit editor grant and records the action atomically.
+ * Callers must authorize access and supply the project's workspace; missing grants raise 404.
+ */
 export async function removeProjectEditor(
   projectId: string,
   workspaceId: string,

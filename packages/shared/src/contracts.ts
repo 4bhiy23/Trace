@@ -38,10 +38,16 @@ const workspacePermissions: Record<WorkspaceRole, readonly WorkspaceAction[]> =
     member: ["workspace:read"],
   };
 
+/**
+ * Reports whether a workspace role permits the requested action.
+ */
 export function canWorkspace(role: WorkspaceRole, action: WorkspaceAction) {
   return workspacePermissions[role].includes(action);
 }
 
+/**
+ * Reports whether a workspace role or an explicit editor grant permits project editing.
+ */
 export function canEditProject(role: WorkspaceRole, hasEditorGrant: boolean) {
   return role === "owner" || role === "admin" || hasEditorGrant;
 }
@@ -198,25 +204,36 @@ export const apiRoutes = {
   openApi: apiPaths.openApi,
   docs: apiPaths.docs,
   workspaces: apiPaths.workspaces,
+  /** Builds the API path for a workspace. */
   workspace: (workspaceId: string) => `/api/workspaces/${workspaceId}`,
+  /** Builds the API path for listing workspace members. */
   workspaceMembers: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/members`,
+  /** Builds the API path for managing a workspace member. */
   workspaceMember: (workspaceId: string, userId: string) =>
     `/api/workspaces/${workspaceId}/members/${userId}`,
+  /** Builds the API path for listing or creating workspace invitations. */
   workspaceInvites: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/invites`,
+  /** Builds the API path for revoking a workspace invitation. */
   workspaceInvite: (workspaceId: string, inviteId: string) =>
     `/api/workspaces/${workspaceId}/invites/${inviteId}`,
+  /** Builds the API path for leaving a workspace. */
   workspaceLeave: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/leave`,
+  /** Builds the API path for transferring workspace ownership. */
   workspaceTransfer: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/transfer`,
+  /** Builds the invitation acceptance path with a URL-encoded token. */
   inviteAccept: (token: string) =>
     `/api/workspace-invites/${encodeURIComponent(token)}/accept`,
+  /** Builds the API path for listing or creating workspace projects. */
   workspaceProjects: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/projects`,
   project: (projectId: string) => `/api/projects/${projectId}`,
+  /** Builds the API path for listing or adding project editors. */
   projectEditors: (projectId: string) => `/api/projects/${projectId}/editors`,
+  /** Builds the API path for removing a project editor. */
   projectEditor: (projectId: string, userId: string) =>
     `/api/projects/${projectId}/editors/${userId}`,
   canvases: (projectId: string) => `/api/projects/${projectId}/canvases`,

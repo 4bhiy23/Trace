@@ -14,6 +14,9 @@ import {
 import { HttpError } from "../../shared/http/errors";
 import { sendWorkspaceInvite } from "./workspace.email";
 
+/**
+ * Builds a workspace audit record identifying the actor, action, and target.
+ */
 const audit = (
   workspaceId: string,
   actorId: string,
@@ -22,9 +25,16 @@ const audit = (
   targetId: string,
 ) => ({ workspaceId, actorId, action, targetType, targetId });
 
+/**
+ * Returns the SHA-256 hex digest used to store and look up invitation tokens.
+ */
 const hashToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 
+/**
+ * Creates a user's default workspace, owner membership, and audit entry atomically.
+ * Does nothing when the workspace insert conflicts with an existing record.
+ */
 export async function createDefaultWorkspace(userId: string, userName: string) {
   await db.transaction(async (transaction) => {
     const [created] = await transaction
@@ -52,6 +62,9 @@ export async function createDefaultWorkspace(userId: string, userName: string) {
   });
 }
 
+/**
+ * Lists a user's workspaces and roles, placing default workspaces before those ordered by latest update.
+ */
 export function listWorkspaces(userId: string) {
   return db
     .select({
@@ -69,6 +82,10 @@ export function listWorkspaces(userId: string) {
     .orderBy(desc(workspace.isDefault), desc(workspace.updatedAt));
 }
 
+/**
+ * Creates a workspace, its owner membership, and an audit entry atomically.
+ * Returns the workspace with the owner role.
+ */
 export async function createWorkspace(name: string, ownerId: string) {
   return db.transaction(async (transaction) => {
     const [created] = await transaction
@@ -97,6 +114,10 @@ export async function createWorkspace(name: string, ownerId: string) {
   });
 }
 
+/**
+ * Renames a workspace and writes an audit entry after caller authorization.
+ * Rejects missing workspaces with 404 and default workspaces with 400.
+ */
 export async function updateWorkspace(
   workspaceId: string,
   name: string,
@@ -136,6 +157,10 @@ export async function updateWorkspace(
   });
 }
 
+/**
+ * Deletes a workspace within a transaction after caller authorization.
+ * Rejects missing workspaces with 404 and default workspaces with 400.
+ */
 export async function deleteWorkspace(workspaceId: string, actorId: string) {
   await db.transaction(async (transaction) => {
     const [current] = await transaction
@@ -166,6 +191,9 @@ export async function deleteWorkspace(workspaceId: string, actorId: string) {
   });
 }
 
+/**
+ * Lists workspace memberships with each user's name, email, and role.
+ */
 export function listMembers(workspaceId: string) {
   return db
     .select({
@@ -181,6 +209,9 @@ export function listMembers(workspaceId: string) {
     .where(eq(workspaceMember.workspaceId, workspaceId));
 }
 
+/**
+ * Lists workspace invitations newest first without exposing token hashes.
+ */
 export function listInvites(workspaceId: string) {
   return db
     .select({
@@ -198,6 +229,11 @@ export function listInvites(workspaceId: string) {
     .orderBy(desc(workspaceInvite.createdAt));
 }
 
+/**
+ * Creates or renews an invitation with a fresh token, records it, then emails the recipient.
+ * Callers must authorize invitations and normalize the email address.
+ * Only owners may invite admins; email delivery failure leaves the invitation stored.
+ */
 export async function inviteMember(
   workspaceId: string,
   workspaceName: string,
@@ -260,6 +296,10 @@ export async function inviteMember(
   return invitation;
 }
 
+/**
+ * Revokes a pending invitation and records the action atomically after caller authorization.
+ * Only owners may revoke admin invitations; missing or non-pending invitations are rejected.
+ */
 export async function revokeInvite(
   workspaceId: string,
   inviteId: string,
@@ -307,6 +347,11 @@ export async function revokeInvite(
   });
 }
 
+/**
+ * Accepts a pending token for the signed-in recipient and creates their membership atomically.
+ * Rejects invalid tokens, email mismatches, existing membership, and concurrent token reuse.
+ * Returns invitation details without the token hash.
+ */
 export async function acceptInvite(
   token: string,
   currentUser: { id: string; email: string },
@@ -386,6 +431,11 @@ export async function acceptInvite(
   });
 }
 
+/**
+ * Switches a member between admin and member roles after caller authorization.
+ * Demotion clears project editor grants; the role change and audit entry are atomic.
+ * Returns member details, or raises 404 if no membership has the opposite role.
+ */
 export async function updateMemberRole(
   workspaceId: string,
   userId: string,
@@ -455,6 +505,10 @@ export async function updateMemberRole(
   });
 }
 
+/**
+ * Removes a membership and its project editor grants with an audit entry atomically.
+ * Callers must authorize member management; owners cannot be removed and only owners may remove admins.
+ */
 export async function removeMember(
   workspaceId: string,
   userId: string,
@@ -518,6 +572,10 @@ export async function removeMember(
   });
 }
 
+/**
+ * Removes the user's membership and project editor grants with an audit entry atomically.
+ * Owners must transfer ownership before leaving; missing memberships raise 404.
+ */
 export async function leaveWorkspace(workspaceId: string, userId: string) {
   await db.transaction(async (transaction) => {
     const [member] = await transaction
@@ -569,6 +627,10 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
   });
 }
 
+/**
+ * Transfers a non-default workspace to an existing member and demotes the former owner to admin.
+ * Callers must verify current ownership; ownership, roles, and the audit entry change atomically.
+ */
 export async function transferWorkspace(
   workspaceId: string,
   newOwnerId: string,

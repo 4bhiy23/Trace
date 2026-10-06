@@ -33,6 +33,9 @@ import {
   updateWorkspace,
 } from "./workspace.service";
 
+/**
+ * Registers workspace, membership, invitation, and ownership endpoints with access checks.
+ */
 export function registerWorkspaceRoutes(app: Express) {
   app.get(apiPaths.workspaces, requireAuth, async (_request, response) => {
     response.json(await listWorkspaces(getCurrentUser(response).id));

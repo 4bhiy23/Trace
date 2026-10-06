@@ -4,6 +4,9 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { apiPaths } from "@trace/shared";
 
+/**
+ * Registers the Better Auth handler for all methods under the shared auth path.
+ */
 export function registerAuthRoutes(app: Express) {
   const handler = toNodeHandler(auth);
   app.all(apiPaths.authHandler, (request, response) =>

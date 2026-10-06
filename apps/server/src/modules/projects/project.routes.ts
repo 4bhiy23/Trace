@@ -26,6 +26,9 @@ import {
   updateProject,
 } from "./project.service";
 
+/**
+ * Registers project and editor endpoints with authentication, access checks, and input validation.
+ */
 export function registerProjectRoutes(app: Express) {
   app.get(
     apiPaths.workspaceProjects,

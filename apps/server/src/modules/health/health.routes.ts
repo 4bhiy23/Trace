@@ -3,6 +3,9 @@ import { apiPaths } from "@trace/shared";
 import { env } from "../../config/env";
 import { sql } from "../../db/client";
 
+/**
+ * Registers a health endpoint that checks database connectivity and returns 503 on failure.
+ */
 export function registerHealthRoutes(app: Express) {
   app.get(apiPaths.health, async (_request, response) => {
     try {

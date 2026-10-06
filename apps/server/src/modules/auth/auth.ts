@@ -14,6 +14,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        /** Creates the default workspace after a user account is created. */
         after: async (createdUser) => {
           await createDefaultWorkspace(createdUser.id, createdUser.name);
         },

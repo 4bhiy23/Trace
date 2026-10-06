@@ -7,6 +7,9 @@ import {
 import { env } from "../../config/env";
 
 const openApiPath = (path: string) => path.replace(/:([^/]+)/g, "{$1}");
+/**
+ * Builds an OpenAPI reference to a named component schema.
+ */
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const errorResponse = {
   description: "Error",
@@ -19,14 +22,23 @@ const securedErrors = {
   "404": errorResponse,
   "409": errorResponse,
 };
+/**
+ * Describes a required JSON request body using a named component schema.
+ */
 const jsonBody = (schema: string) => ({
   required: true,
   content: { "application/json": { schema: ref(schema) } },
 });
+/**
+ * Describes a JSON response using a named component schema.
+ */
 const jsonResponse = (description: string, schema: string) => ({
   description,
   content: { "application/json": { schema: ref(schema) } },
 });
+/**
+ * Describes a JSON array response whose items use a named component schema.
+ */
 const arrayResponse = (description: string, schema: string) => ({
   description,
   content: {

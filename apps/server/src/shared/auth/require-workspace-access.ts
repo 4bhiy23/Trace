@@ -25,6 +25,9 @@ type WorkspaceContext = {
   updatedAt: Date;
 };
 
+/**
+ * Returns the workspace context set by access middleware, or throws 403 when absent.
+ */
 export function getWorkspaceContext(response: Response) {
   const context = response.locals.workspace as WorkspaceContext | undefined;
   if (!context)
@@ -32,6 +35,9 @@ export function getWorkspaceContext(response: Response) {
   return context;
 }
 
+/**
+ * Returns the project context set by access middleware, or throws 403 when absent.
+ */
 export function getProjectContext(response: Response) {
   const context = response.locals.project as
     | {
@@ -48,6 +54,10 @@ export function getProjectContext(response: Response) {
   return context;
 }
 
+/**
+ * Creates middleware that requires one of the supplied workspace roles for the authenticated user.
+ * Stores workspace context in response locals; missing membership or a disallowed role yields 404.
+ */
 export function requireWorkspaceRole(
   ...roles: WorkspaceRole[]
 ): RequestHandler {
@@ -81,6 +91,10 @@ export function requireWorkspaceRole(
   };
 }
 
+/**
+ * Creates middleware enforcing project read, edit, or management access for the authenticated user.
+ * Stores project and workspace contexts in response locals; missing or denied access yields 404.
+ */
 export function requireProjectAccess(
   access: "read" | "edit" | "manage",
 ): RequestHandler {

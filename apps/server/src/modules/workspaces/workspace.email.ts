@@ -1,6 +1,10 @@
 import { env } from "../../config/env";
 import { HttpError } from "../../shared/http/errors";
 
+/**
+ * Sends an invitation email through Resend with the token encoded in the acceptance URL.
+ * Throws 503 when email delivery is unconfigured and 502 when Resend rejects the request.
+ */
 export async function sendWorkspaceInvite(
   email: string,
   workspaceName: string,
