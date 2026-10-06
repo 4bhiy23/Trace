@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { z } from "zod";
 import { auth } from "../../modules/auth/auth";
+import { createDefaultWorkspace } from "../../modules/workspaces/workspace.service";
 import { HttpError } from "../http/errors";
 
 export function requireAuth(
@@ -11,12 +12,13 @@ export function requireAuth(
 ) {
   void auth.api
     .getSession({ headers: fromNodeHeaders(request.headers) })
-    .then((session) => {
+    .then(async (session) => {
       if (!session) {
         next(new HttpError(401, "UNAUTHORIZED", "Sign in required"));
         return;
       }
 
+      await createDefaultWorkspace(session.user.id, session.user.name);
       response.locals.user = session.user;
       next();
     })

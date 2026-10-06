@@ -1,5 +1,5 @@
 import { canEditProject, type WorkspaceRole } from "@trace/shared";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import {
   project,
@@ -124,7 +124,7 @@ export function listProjectEditors(projectId: string) {
       userId: workspaceMember.userId,
       name: user.name,
       email: user.email,
-      createdAt: workspaceMember.createdAt,
+      createdAt: sql<Date>`coalesce(${projectEditor.createdAt}, ${workspaceMember.createdAt})`,
     })
     .from(project)
     .innerJoin(

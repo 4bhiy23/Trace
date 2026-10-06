@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { InviteRole, WorkspaceRole } from "@trace/shared";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../../db/client";
 import {
   project,
@@ -12,7 +12,7 @@ import {
   workspaceMember,
 } from "../../db/schema";
 import { HttpError } from "../../shared/http/errors";
-import { sendWorkspaceInvite } from "./workspace.email";
+import { assertEmailConfigured, sendWorkspaceInvite } from "./workspace.email";
 
 /**
  * Builds a workspace audit record identifying the actor, action, and target.
@@ -245,6 +245,7 @@ export async function inviteMember(
   if (role === "admin" && actorRole !== "owner") {
     throw new HttpError(403, "FORBIDDEN", "Only the owner can invite an admin");
   }
+  assertEmailConfigured();
 
   const [existingMember] = await db
     .select({ id: workspaceMember.userId })
@@ -258,40 +259,66 @@ export async function inviteMember(
   }
 
   const token = randomBytes(32).toString("base64url");
-  const [invitation] = await db
-    .insert(workspaceInvite)
-    .values({
-      workspaceId,
-      email,
-      role,
-      tokenHash: hashToken(token),
-      invitedBy: actorId,
-    })
-    .onConflictDoUpdate({
-      target: [workspaceInvite.workspaceId, workspaceInvite.email],
-      set: {
-        role,
-        status: "pending",
-        tokenHash: hashToken(token),
-        invitedBy: actorId,
-      },
-    })
-    .returning({
-      id: workspaceInvite.id,
-      workspaceId: workspaceInvite.workspaceId,
-      email: workspaceInvite.email,
-      role: workspaceInvite.role,
-      status: workspaceInvite.status,
-      invitedBy: workspaceInvite.invitedBy,
-      createdAt: workspaceInvite.createdAt,
-      updatedAt: workspaceInvite.updatedAt,
-    });
+  const tokenHash = hashToken(token);
+  const invitation = await db.transaction(async (transaction) => {
+    const [existingInvitation] = await transaction
+      .select({ role: workspaceInvite.role })
+      .from(workspaceInvite)
+      .where(
+        and(
+          eq(workspaceInvite.workspaceId, workspaceId),
+          eq(workspaceInvite.email, email),
+        ),
+      );
+    if (existingInvitation?.role === "admin" && actorRole !== "owner") {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Only the owner can modify an admin invitation",
+      );
+    }
 
-  await db
-    .insert(workspaceAudit)
-    .values(
-      audit(workspaceId, actorId, "workspace.invited", "invite", invitation.id),
-    );
+    const [invitation] = await transaction
+      .insert(workspaceInvite)
+      .values({ workspaceId, email, role, tokenHash, invitedBy: actorId })
+      .onConflictDoUpdate({
+        target: [workspaceInvite.workspaceId, workspaceInvite.email],
+        set: { role, status: "pending", tokenHash, invitedBy: actorId },
+        ...(actorRole === "owner"
+          ? {}
+          : { where: ne(workspaceInvite.role, "admin") }),
+      })
+      .returning({
+        id: workspaceInvite.id,
+        workspaceId: workspaceInvite.workspaceId,
+        email: workspaceInvite.email,
+        role: workspaceInvite.role,
+        status: workspaceInvite.status,
+        invitedBy: workspaceInvite.invitedBy,
+        createdAt: workspaceInvite.createdAt,
+        updatedAt: workspaceInvite.updatedAt,
+      });
+    if (!invitation) {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Only the owner can modify an admin invitation",
+      );
+    }
+
+    await transaction
+      .insert(workspaceAudit)
+      .values(
+        audit(
+          workspaceId,
+          actorId,
+          "workspace.invited",
+          "invite",
+          invitation.id,
+        ),
+      );
+    return invitation;
+  });
   await sendWorkspaceInvite(email, workspaceName, token);
   return invitation;
 }
