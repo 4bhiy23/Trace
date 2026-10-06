@@ -1,9 +1,10 @@
 import type { Express } from "express";
+import { apiPaths } from "@trace/shared";
 import { env } from "../../config/env";
 import { sql } from "../../db/client";
 
 export function registerHealthRoutes(app: Express) {
-  app.get("/health", async (_request, response) => {
+  app.get(apiPaths.health, async (_request, response) => {
     try {
       await sql`select 1`;
       response.json({

@@ -1,148 +1,147 @@
 import type { Express } from "express";
 import {
-  memberInviteSchema,
-  memberRoleUpdateSchema,
-  projectCreateSchema,
-  projectUpdateSchema,
   apiPaths,
+  projectCreateSchema,
+  projectEditorCreateSchema,
+  projectUpdateSchema,
 } from "@trace/shared";
-import { db } from "../../db/client";
-import { user } from "../../db/schema";
 import {
   getCurrentUser,
   getRouteParam,
-  getUuidParam,
   requireAuth,
 } from "../../shared/auth/require-auth";
-import { requireProjectRole } from "../../shared/auth/require-project-role";
-import { HttpError } from "../../shared/http/errors";
 import {
-  addMember,
+  getProjectContext,
+  getWorkspaceContext,
+  requireProjectAccess,
+  requireWorkspaceRole,
+} from "../../shared/auth/require-workspace-access";
+import {
+  addProjectEditor,
   archiveProject,
   createProject,
-  getProject,
-  listMembers,
+  listProjectEditors,
   listProjects,
-  removeMember,
-  updateMember,
+  removeProjectEditor,
   updateProject,
 } from "./project.service";
-import { eq } from "drizzle-orm";
 
 export function registerProjectRoutes(app: Express) {
-  app.post(apiPaths.projects, requireAuth, async (_request, response) => {
-    const input = projectCreateSchema.parse(_request.body);
-    const project = await createProject(
-      input.name,
-      getCurrentUser(response).id,
-    );
-    response.status(201).json(project);
-  });
+  app.get(
+    apiPaths.workspaceProjects,
+    requireAuth,
+    requireWorkspaceRole("owner", "admin", "member"),
+    async (_request, response) => {
+      const context = getWorkspaceContext(response);
+      response.json(
+        await listProjects(
+          context.id,
+          getCurrentUser(response).id,
+          context.role,
+        ),
+      );
+    },
+  );
 
-  app.get(apiPaths.projects, requireAuth, async (_request, response) => {
-    response.json(await listProjects(getCurrentUser(response).id));
-  });
+  app.post(
+    apiPaths.workspaceProjects,
+    requireAuth,
+    requireWorkspaceRole("owner", "admin"),
+    async (request, response) => {
+      const input = projectCreateSchema.parse(request.body);
+      response
+        .status(201)
+        .json(
+          await createProject(
+            getWorkspaceContext(response).id,
+            input.name,
+            getCurrentUser(response).id,
+          ),
+        );
+    },
+  );
 
   app.get(
     apiPaths.project,
     requireAuth,
-    requireProjectRole("owner", "editor", "viewer"),
+    requireProjectAccess("read"),
+    (_request, response) => response.json(getProjectContext(response)),
+  );
+
+  app.patch(
+    apiPaths.project,
+    requireAuth,
+    requireProjectAccess("manage"),
     async (request, response) => {
+      const input = projectUpdateSchema.parse(request.body);
+      const project = getProjectContext(response);
       response.json(
-        await getProject(
-          getUuidParam(request, "projectId"),
+        await updateProject(
+          project.id,
+          project.workspaceId,
+          input.name,
           getCurrentUser(response).id,
         ),
       );
     },
   );
 
-  app.patch(
-    apiPaths.project,
-    requireAuth,
-    requireProjectRole("owner"),
-    async (request, response) => {
-      const input = projectUpdateSchema.parse(request.body);
-      response.json(
-        await updateProject(getUuidParam(request, "projectId"), input.name),
-      );
-    },
-  );
-
   app.delete(
     apiPaths.project,
     requireAuth,
-    requireProjectRole("owner"),
-    async (request, response) => {
-      await archiveProject(getUuidParam(request, "projectId"));
+    requireProjectAccess("manage"),
+    async (_request, response) => {
+      const project = getProjectContext(response);
+      await archiveProject(
+        project.id,
+        project.workspaceId,
+        getCurrentUser(response).id,
+      );
       response.status(204).send();
     },
   );
 
   app.get(
-    apiPaths.members,
+    apiPaths.projectEditors,
     requireAuth,
-    requireProjectRole("owner", "editor", "viewer"),
-    async (request, response) => {
-      response.json(await listMembers(getUuidParam(request, "projectId")));
+    requireProjectAccess("manage"),
+    async (_request, response) => {
+      response.json(await listProjectEditors(getProjectContext(response).id));
     },
   );
 
   app.post(
-    apiPaths.members,
+    apiPaths.projectEditors,
     requireAuth,
-    requireProjectRole("owner"),
+    requireProjectAccess("manage"),
     async (request, response) => {
-      const input = memberInviteSchema.parse(request.body);
-      const [memberUser] = await db
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.email, input.email));
-      if (!memberUser) throw new HttpError(404, "NOT_FOUND", "User not found");
+      const input = projectEditorCreateSchema.parse(request.body);
+      const project = getProjectContext(response);
       response
         .status(201)
         .json(
-          await addMember(
-            getUuidParam(request, "projectId"),
-            memberUser.id,
-            input.role,
+          await addProjectEditor(
+            project.id,
+            project.workspaceId,
+            input.userId,
+            getCurrentUser(response).id,
           ),
         );
     },
   );
 
-  app.patch(
-    apiPaths.member,
-    requireAuth,
-    requireProjectRole("owner"),
-    async (request, response) => {
-      const input = memberRoleUpdateSchema.parse(request.body);
-      response.json(
-        await updateMember(
-          getUuidParam(request, "projectId"),
-          getRouteParam(request, "userId"),
-          input.role,
-        ),
-      );
-    },
-  );
-
   app.delete(
-    apiPaths.member,
+    apiPaths.projectEditor,
     requireAuth,
-    requireProjectRole("owner"),
+    requireProjectAccess("manage"),
     async (request, response) => {
-      const currentUser = getCurrentUser(response);
-      const projectId = getUuidParam(request, "projectId");
-      const userId = getRouteParam(request, "userId");
-      if (currentUser.id === userId) {
-        throw new HttpError(
-          400,
-          "BAD_REQUEST",
-          "Owners cannot remove themselves",
-        );
-      }
-      await removeMember(projectId, userId);
+      const project = getProjectContext(response);
+      await removeProjectEditor(
+        project.id,
+        project.workspaceId,
+        getRouteParam(request, "userId"),
+        getCurrentUser(response).id,
+      );
       response.status(204).send();
     },
   );

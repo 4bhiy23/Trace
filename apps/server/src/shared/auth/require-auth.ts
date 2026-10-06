@@ -24,7 +24,8 @@ export function requireAuth(
 }
 
 export const getCurrentUser = (response: Response) => {
-  const user = response.locals.user as { id: string } | undefined;
+  const user = response.locals.user as
+    { id: string; name: string; email: string } | undefined;
   if (!user) throw new HttpError(401, "UNAUTHORIZED", "Sign in required");
   return user;
 };
