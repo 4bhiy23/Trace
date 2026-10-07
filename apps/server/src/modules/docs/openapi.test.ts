@@ -32,4 +32,10 @@ test("OpenAPI documents every workspace and project route", async () => {
     const openApiPath = path.replace(/:([^/]+)/g, "{$1}");
     assert.ok(documentedPaths[openApiPath], `${openApiPath} is undocumented`);
   }
+
+  const schemas = openApiDocument.components.schemas as Record<
+    string,
+    { properties?: Record<string, { type?: string }> }
+  >;
+  assert.equal(schemas.ApiError.properties?.requestId?.type, "string");
 });

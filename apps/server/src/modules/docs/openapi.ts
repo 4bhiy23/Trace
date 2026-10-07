@@ -468,6 +468,7 @@ export const openApiDocument = {
         properties: {
           code: { type: "string" },
           message: { type: "string" },
+          requestId: { type: "string", format: "uuid" },
           fields: {
             type: "object",
             additionalProperties: { type: "array", items: { type: "string" } },

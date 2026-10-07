@@ -49,7 +49,7 @@ general-purpose authorization or notification layer is needed.
   from the project or workspace route parameter and exposes the membership in
   `response.locals`.
 - Centralize permission checks in the workspace feature: any member reads,
-  owner/admin edit and manage, and a member edits only with a project-editor
+  owner/admin edit and manage, and a member edits only with a project-editor 
   row. Owners and admins restore versions.
 - Implement workspace, member, invitation, project, and editor-grant services
   under `apps/server/src/modules/workspaces`; use transactions for dependent

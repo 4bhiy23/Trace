@@ -165,15 +165,16 @@ export async function updateWorkspace(
 }
 
 /**
- * Deletes a workspace within a transaction after caller authorization.
+ * Deletes a workspace only when the caller is still its owner.
  * Rejects missing workspaces with 404 and default workspaces with 400.
  */
 export async function deleteWorkspace(workspaceId: string, actorId: string) {
   await db.transaction(async (transaction) => {
     const [current] = await transaction
-      .select({ isDefault: workspace.isDefault })
+      .select({ isDefault: workspace.isDefault, ownerId: workspace.ownerId })
       .from(workspace)
-      .where(eq(workspace.id, workspaceId));
+      .where(eq(workspace.id, workspaceId))
+      .for("update");
     if (!current) throw new HttpError(404, "NOT_FOUND", "Workspace not found");
     if (current.isDefault) {
       throw new HttpError(
@@ -181,6 +182,9 @@ export async function deleteWorkspace(workspaceId: string, actorId: string) {
         "BAD_REQUEST",
         "Default workspaces cannot be deleted",
       );
+    }
+    if (current.ownerId !== actorId) {
+      throw new HttpError(404, "NOT_FOUND", "Workspace not found");
     }
 
     await transaction
@@ -247,16 +251,33 @@ export async function inviteMember(
   email: string,
   role: InviteRole,
   actorId: string,
-  actorRole: WorkspaceRole,
 ) {
-  if (role === "admin" && actorRole !== "owner") {
-    throw new HttpError(403, "FORBIDDEN", "Only the owner can invite an admin");
-  }
   assertEmailConfigured();
 
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   const invitation = await db.transaction(async (transaction) => {
+    const [actor] = await transaction
+      .select({ role: workspaceMember.role })
+      .from(workspaceMember)
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(workspaceMember.userId, actorId),
+        ),
+      )
+      .for("update");
+    if (!actor || (actor.role !== "owner" && actor.role !== "admin")) {
+      throw new HttpError(404, "NOT_FOUND", "Workspace not found");
+    }
+    if (role === "admin" && actor.role !== "owner") {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Only the owner can invite an admin",
+      );
+    }
+
     const [existingInvitation] = await transaction
       .select({ role: workspaceInvite.role })
       .from(workspaceInvite)
@@ -266,7 +287,7 @@ export async function inviteMember(
           eq(workspaceInvite.email, email),
         ),
       );
-    if (existingInvitation?.role === "admin" && actorRole !== "owner") {
+    if (existingInvitation?.role === "admin" && actor.role !== "owner") {
       throw new HttpError(
         403,
         "FORBIDDEN",
@@ -280,7 +301,7 @@ export async function inviteMember(
       .onConflictDoUpdate({
         target: [workspaceInvite.workspaceId, workspaceInvite.email],
         set: { role, status: "pending", tokenHash, invitedBy: actorId },
-        ...(actorRole === "owner"
+        ...(actor.role === "owner"
           ? {}
           : { where: ne(workspaceInvite.role, "admin") }),
       })
@@ -345,9 +366,22 @@ export async function revokeInvite(
   workspaceId: string,
   inviteId: string,
   actorId: string,
-  actorRole: WorkspaceRole,
 ) {
   await db.transaction(async (transaction) => {
+    const [actor] = await transaction
+      .select({ role: workspaceMember.role })
+      .from(workspaceMember)
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(workspaceMember.userId, actorId),
+        ),
+      )
+      .for("update");
+    if (!actor || (actor.role !== "owner" && actor.role !== "admin")) {
+      throw new HttpError(404, "NOT_FOUND", "Workspace not found");
+    }
+
     const [invitation] = await transaction
       .select({
         role: workspaceInvite.role,
@@ -363,7 +397,7 @@ export async function revokeInvite(
       );
     if (!invitation)
       throw new HttpError(404, "NOT_FOUND", "Invitation not found");
-    if (invitation.role === "admin" && actorRole !== "owner") {
+    if (invitation.role === "admin" && actor.role !== "owner") {
       throw new HttpError(
         403,
         "FORBIDDEN",
@@ -501,6 +535,20 @@ export async function updateMemberRole(
   actorId: string,
 ) {
   return db.transaction(async (transaction) => {
+    const [actor] = await transaction
+      .select({ role: workspaceMember.role })
+      .from(workspaceMember)
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(workspaceMember.userId, actorId),
+        ),
+      )
+      .for("update");
+    if (!actor || actor.role !== "owner") {
+      throw new HttpError(404, "NOT_FOUND", "Workspace not found");
+    }
+
     const [updated] = await transaction
       .update(workspaceMember)
       .set({ role })
@@ -571,9 +619,22 @@ export async function removeMember(
   workspaceId: string,
   userId: string,
   actorId: string,
-  actorRole: WorkspaceRole,
 ) {
   await db.transaction(async (transaction) => {
+    const [actor] = await transaction
+      .select({ role: workspaceMember.role })
+      .from(workspaceMember)
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(workspaceMember.userId, actorId),
+        ),
+      )
+      .for("update");
+    if (!actor || (actor.role !== "owner" && actor.role !== "admin")) {
+      throw new HttpError(404, "NOT_FOUND", "Workspace not found");
+    }
+
     const [member] = await transaction
       .select({ role: workspaceMember.role })
       .from(workspaceMember)
@@ -592,7 +653,7 @@ export async function removeMember(
         "The workspace owner cannot be removed",
       );
     }
-    if (member.role === "admin" && actorRole !== "owner") {
+    if (member.role === "admin" && actor.role !== "owner") {
       throw new HttpError(
         403,
         "FORBIDDEN",

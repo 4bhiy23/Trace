@@ -120,7 +120,6 @@ export function registerWorkspaceRoutes(app: Express) {
         context.id,
         getRouteParam(request, "userId"),
         getCurrentUser(response).id,
-        context.role,
       );
       response.status(204).send();
     },
@@ -151,7 +150,6 @@ export function registerWorkspaceRoutes(app: Express) {
             input.email,
             input.role,
             getCurrentUser(response).id,
-            context.role,
           ),
         );
     },
@@ -167,7 +165,6 @@ export function registerWorkspaceRoutes(app: Express) {
         context.id,
         getUuidParam(request, "inviteId"),
         getCurrentUser(response).id,
-        context.role,
       );
       response.status(204).send();
     },
