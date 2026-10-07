@@ -12,7 +12,11 @@ export class HttpError extends Error {
   }
 }
 
-export function sendError(response: Response, error: unknown) {
+export function sendError(
+  response: Response,
+  error: unknown,
+  requestId?: string,
+) {
   if (error instanceof ZodError) {
     const fields = error.issues.reduce<Record<string, string[]>>(
       (result, issue) => {
@@ -43,5 +47,6 @@ export function sendError(response: Response, error: unknown) {
   response.status(500).json({
     code: "INTERNAL_ERROR",
     message: "An unexpected error occurred",
+    ...(requestId ? { requestId } : {}),
   } satisfies ApiError);
 }

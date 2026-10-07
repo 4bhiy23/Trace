@@ -67,6 +67,9 @@ export const workspaceMember = pgTable(
   (table) => [
     primaryKey({ columns: [table.workspaceId, table.userId] }),
     index("workspace_member_user_idx").on(table.userId),
+    uniqueIndex("workspace_member_owner_unique")
+      .on(table.workspaceId)
+      .where(sql`${table.role} = 'owner'`),
   ],
 );
 

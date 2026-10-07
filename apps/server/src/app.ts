@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import cors from "cors";
 import express, {
   type NextFunction,
@@ -10,8 +11,8 @@ import { registerHealthRoutes } from "./modules/health/health.routes";
 import { registerProjectRoutes } from "./modules/projects/project.routes";
 import { registerDocsRoutes } from "./modules/docs/docs.routes";
 import { registerWorkspaceRoutes } from "./modules/workspaces/workspace.routes";
-import { requestLogger } from "./shared/logger";
-import { sendError } from "./shared/http/errors";
+import { logger, requestLogger } from "./shared/logger";
+import { HttpError, sendError } from "./shared/http/errors";
 
 /**
  * Builds the Express app with API routes, middleware, and centralized error handling.
@@ -30,11 +31,20 @@ export function createApp() {
   app.use(
     (
       error: unknown,
-      _request: Request,
+      request: Request,
       response: Response,
       next: NextFunction,
     ) => {
       void next;
+      if (error instanceof Error && !(error instanceof HttpError)) {
+        const requestId = randomUUID();
+        logger.error(
+          { err: error, requestId, method: request.method },
+          "Unhandled request error",
+        );
+        sendError(response, error, requestId);
+        return;
+      }
       sendError(response, error);
     },
   );

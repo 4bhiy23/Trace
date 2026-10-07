@@ -170,7 +170,8 @@ export async function addProjectEditor(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, userId),
         ),
-      );
+      )
+      .for("update");
     if (!member) throw new HttpError(404, "NOT_FOUND", "Member not found");
     if (member.role !== "member") {
       throw new HttpError(

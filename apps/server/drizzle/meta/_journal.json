@@ -15,6 +15,13 @@
       "when": 1791227802041,
       "tag": "0001_burly_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791289473216,
+      "tag": "0002_oval_captain_universe",
+      "breakpoints": true
     }
   ]
 }

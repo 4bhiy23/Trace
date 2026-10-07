@@ -36,6 +36,13 @@ const hashToken = (token: string) =>
  * Does nothing when the workspace insert conflicts with an existing record.
  */
 export async function createDefaultWorkspace(userId: string, userName: string) {
+  const [existing] = await db
+    .select({ id: workspace.id })
+    .from(workspace)
+    .where(and(eq(workspace.ownerId, userId), eq(workspace.isDefault, true)))
+    .limit(1);
+  if (existing) return;
+
   await db.transaction(async (transaction) => {
     const [created] = await transaction
       .insert(workspace)
@@ -247,17 +254,6 @@ export async function inviteMember(
   }
   assertEmailConfigured();
 
-  const [existingMember] = await db
-    .select({ id: workspaceMember.userId })
-    .from(workspaceMember)
-    .innerJoin(user, eq(user.id, workspaceMember.userId))
-    .where(
-      and(eq(workspaceMember.workspaceId, workspaceId), eq(user.email, email)),
-    );
-  if (existingMember) {
-    throw new HttpError(409, "CONFLICT", "User is already a workspace member");
-  }
-
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   const invitation = await db.transaction(async (transaction) => {
@@ -306,6 +302,24 @@ export async function inviteMember(
       );
     }
 
+    const [existingMember] = await transaction
+      .select({ id: workspaceMember.userId })
+      .from(workspaceMember)
+      .innerJoin(user, eq(user.id, workspaceMember.userId))
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(user.email, email),
+        ),
+      );
+    if (existingMember) {
+      throw new HttpError(
+        409,
+        "CONFLICT",
+        "User is already a workspace member",
+      );
+    }
+
     await transaction
       .insert(workspaceAudit)
       .values(
@@ -335,7 +349,11 @@ export async function revokeInvite(
 ) {
   await db.transaction(async (transaction) => {
     const [invitation] = await transaction
-      .select({ role: workspaceInvite.role, status: workspaceInvite.status })
+      .select({
+        role: workspaceInvite.role,
+        status: workspaceInvite.status,
+        tokenHash: workspaceInvite.tokenHash,
+      })
       .from(workspaceInvite)
       .where(
         and(
@@ -356,10 +374,21 @@ export async function revokeInvite(
       throw new HttpError(409, "CONFLICT", "Invitation is not pending");
     }
 
-    await transaction
+    const [revoked] = await transaction
       .update(workspaceInvite)
       .set({ status: "revoked" })
-      .where(eq(workspaceInvite.id, inviteId));
+      .where(
+        and(
+          eq(workspaceInvite.id, inviteId),
+          eq(workspaceInvite.workspaceId, workspaceId),
+          eq(workspaceInvite.status, "pending"),
+          eq(workspaceInvite.role, invitation.role),
+          eq(workspaceInvite.tokenHash, invitation.tokenHash),
+        ),
+      )
+      .returning({ id: workspaceInvite.id });
+    if (!revoked) throw new HttpError(409, "CONFLICT", "Invitation changed");
+
     await transaction
       .insert(workspaceAudit)
       .values(
@@ -383,11 +412,12 @@ export async function acceptInvite(
   token: string,
   currentUser: { id: string; email: string },
 ) {
+  const tokenHash = hashToken(token);
   return db.transaction(async (transaction) => {
     const [invitation] = await transaction
       .select()
       .from(workspaceInvite)
-      .where(eq(workspaceInvite.tokenHash, hashToken(token)));
+      .where(eq(workspaceInvite.tokenHash, tokenHash));
     if (!invitation || invitation.status !== "pending") {
       throw new HttpError(404, "NOT_FOUND", "Invitation not found");
     }
@@ -423,6 +453,7 @@ export async function acceptInvite(
         and(
           eq(workspaceInvite.id, invitation.id),
           eq(workspaceInvite.status, "pending"),
+          eq(workspaceInvite.tokenHash, tokenHash),
         ),
       )
       .returning({
@@ -439,19 +470,19 @@ export async function acceptInvite(
       throw new HttpError(409, "CONFLICT", "Invitation was already used");
 
     await transaction.insert(workspaceMember).values({
-      workspaceId: invitation.workspaceId,
+      workspaceId: accepted.workspaceId,
       userId: currentUser.id,
-      role: invitation.role,
+      role: accepted.role,
     });
     await transaction
       .insert(workspaceAudit)
       .values(
         audit(
-          invitation.workspaceId,
+          accepted.workspaceId,
           currentUser.id,
           "workspace.invite_accepted",
           "invite",
-          invitation.id,
+          accepted.id,
         ),
       );
     return accepted;
@@ -551,7 +582,8 @@ export async function removeMember(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, userId),
         ),
-      );
+      )
+      .for("update");
     if (!member) throw new HttpError(404, "NOT_FOUND", "Member not found");
     if (member.role === "owner") {
       throw new HttpError(
@@ -583,14 +615,18 @@ export async function removeMember(
         ),
       );
     }
-    await transaction
+    const [removed] = await transaction
       .delete(workspaceMember)
       .where(
         and(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, userId),
+          ne(workspaceMember.role, "owner"),
         ),
-      );
+      )
+      .returning({ userId: workspaceMember.userId });
+    if (!removed) throw new HttpError(409, "CONFLICT", "Member role changed");
+
     await transaction
       .insert(workspaceAudit)
       .values(
@@ -613,7 +649,8 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, userId),
         ),
-      );
+      )
+      .for("update");
     if (!member) throw new HttpError(404, "NOT_FOUND", "Workspace not found");
     if (member.role === "owner") {
       throw new HttpError(
@@ -638,14 +675,18 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
         ),
       );
     }
-    await transaction
+    const [left] = await transaction
       .delete(workspaceMember)
       .where(
         and(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, userId),
+          ne(workspaceMember.role, "owner"),
         ),
-      );
+      )
+      .returning({ userId: workspaceMember.userId });
+    if (!left) throw new HttpError(409, "CONFLICT", "Member role changed");
+
     await transaction
       .insert(workspaceAudit)
       .values(
@@ -688,20 +729,35 @@ export async function transferWorkspace(
       );
     if (!newOwner) throw new HttpError(404, "NOT_FOUND", "Member not found");
 
-    await transaction
+    const [transferred] = await transaction
       .update(workspace)
       .set({ ownerId: newOwnerId })
-      .where(eq(workspace.id, workspaceId));
-    await transaction
+      .where(
+        and(
+          eq(workspace.id, workspaceId),
+          eq(workspace.ownerId, currentOwnerId),
+          eq(workspace.isDefault, false),
+        ),
+      )
+      .returning({ id: workspace.id });
+    if (!transferred)
+      throw new HttpError(403, "FORBIDDEN", "Workspace ownership changed");
+
+    const [formerOwner] = await transaction
       .update(workspaceMember)
       .set({ role: "admin" })
       .where(
         and(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, currentOwnerId),
+          eq(workspaceMember.role, "owner"),
         ),
-      );
-    await transaction
+      )
+      .returning({ userId: workspaceMember.userId });
+    if (!formerOwner)
+      throw new HttpError(409, "CONFLICT", "Workspace owner changed");
+
+    const [newOwnerMembership] = await transaction
       .update(workspaceMember)
       .set({ role: "owner" })
       .where(
@@ -709,7 +765,10 @@ export async function transferWorkspace(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, newOwnerId),
         ),
-      );
+      )
+      .returning({ userId: workspaceMember.userId });
+    if (!newOwnerMembership)
+      throw new HttpError(409, "CONFLICT", "Member changed");
     await transaction
       .insert(workspaceAudit)
       .values(
