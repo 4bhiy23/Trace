@@ -10,29 +10,33 @@ import {
   Code,
   Check,
 } from "lucide-react";
-import { CanvasType, WorkspaceFolder } from "./types";
+import { CanvasType, WorkspaceProject } from "./types";
 import { cn } from "@/lib/utils";
 
 interface NewFileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  folders: WorkspaceFolder[];
+  projects: WorkspaceProject[];
+  defaultProjectId?: string;
   onCreateFile: (data: {
     name: string;
     type: CanvasType;
-    location: string | null;
+    projectId: string;
   }) => void;
 }
 
 export function NewFileModal({
   isOpen,
   onClose,
-  folders,
+  projects,
+  defaultProjectId,
   onCreateFile,
 }: NewFileModalProps) {
   const [name, setName] = useState("Untitled File");
   const [selectedType, setSelectedType] = useState<CanvasType>("markdown");
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(
+    defaultProjectId || projects[0]?.id || "",
+  );
 
   if (!isOpen) return null;
 
@@ -80,7 +84,7 @@ export function NewFileModal({
       onCreateFile({
         name: name.trim(),
         type: selectedType,
-        location: selectedFolder,
+        projectId: selectedProjectId || projects[0]?.id || "",
       });
       setName("Untitled File");
       onClose();
@@ -88,27 +92,31 @@ export function NewFileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-200 font-brand-sans">
       <div
-        className="w-full max-w-lg rounded-2xl bg-[var(--card)] text-[var(--card-foreground)] border border-[var(--border)] shadow-2xl p-6 relative animate-in zoom-in-95 duration-200"
+        className="w-full max-w-lg bg-[#FFFEFC] dark:bg-[#18191c] text-black dark:text-white border-2 border-black dark:border-white/30 shadow-[8px_10px_0px_0px_#000000] p-6 relative animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between pb-3.5 border-b-2 border-black dark:border-white/20">
           <div>
-            <h2 className="text-base font-bold tracking-tight text-[var(--foreground)]">
-              Create New Canvas
+            <div className="font-roboto-mono text-[10px] uppercase tracking-[0.2em] text-[#636363] dark:text-white/60 font-semibold mb-0.5">
+              CANVAS CREATION
+            </div>
+            <h2 className="font-brand-display font-bold text-xl text-black dark:text-white tracking-tight">
+              Draft New Canvas
             </h2>
-            <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-              Choose a canvas type to start documenting or diagramming.
+            <p className="font-brand-sans text-xs text-[#636363] dark:text-white/60 mt-0.5">
+              Select a canvas format for technical documentation or system
+              architectures.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]/50 transition-colors cursor-pointer"
+            className="p-1 border border-black hover:bg-black hover:text-white dark:border-white dark:hover:bg-white dark:hover:text-black transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 
@@ -116,8 +124,8 @@ export function NewFileModal({
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {/* File Name */}
           <div>
-            <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-              File Name
+            <label className="block font-roboto-mono text-[10.5px] uppercase tracking-wider text-black dark:text-white mb-1.5 font-bold">
+              FILE NAME
             </label>
             <input
               autoFocus
@@ -126,72 +134,73 @@ export function NewFileModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Distributed Cache Design"
               required
-              className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all"
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-[#111213] border-2 border-black dark:border-white/40 text-black dark:text-white focus:outline-none shadow-[2px_2px_0px_#000000] focus:shadow-[3px_3px_0px_#000000] transition-all placeholder:text-[#636363]"
             />
           </div>
 
-          {/* Folder Location */}
-          <div>
-            <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-              Folder
-            </label>
-            <select
-              value={selectedFolder || ""}
-              onChange={(e) => setSelectedFolder(e.target.value || null)}
-              className="w-full px-3 py-2 text-xs rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] cursor-pointer"
-            >
-              <option value="">Root (No folder)</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.name}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Project Selection */}
+          {projects.length > 0 && (
+            <div>
+              <label className="block font-roboto-mono text-[10.5px] uppercase tracking-wider text-black dark:text-white mb-1.5 font-bold">
+                TARGET PROJECT
+              </label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-[#111213] border-2 border-black dark:border-white/40 text-black dark:text-white cursor-pointer focus:outline-none shadow-[2px_2px_0px_#000000] font-brand-sans"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.count} canvases)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Canvas Types Grid */}
           <div>
-            <label className="block text-xs font-semibold text-[var(--foreground)] mb-1.5">
-              Canvas Type
+            <label className="block font-roboto-mono text-[10.5px] uppercase tracking-wider text-black dark:text-white mb-1.5 font-bold">
+              CANVAS FORMAT
             </label>
-            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
-              {canvasOptions.map((opt) => {
-                const Icon = opt.icon;
-                const isSelected = selectedType === opt.type;
+            <div className="space-y-1.5">
+              {canvasOptions.map((option) => {
+                const isSelected = selectedType === option.type;
+                const IconComponent = option.icon;
                 return (
                   <button
-                    key={opt.type}
+                    key={option.type}
                     type="button"
-                    onClick={() => setSelectedType(opt.type)}
+                    onClick={() => setSelectedType(option.type)}
                     className={cn(
-                      "flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer",
+                      "w-full flex items-center justify-between p-2.5 text-left transition-all cursor-pointer font-brand-sans",
                       isSelected
-                        ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--foreground)] shadow-xs"
-                        : "border-[var(--border)]/70 hover:border-[var(--border)] hover:bg-[var(--secondary)]/30 text-[var(--muted-foreground)]",
+                        ? "bg-[#E9FFA3] text-black border-2 border-black shadow-[2px_2px_0px_#000000]"
+                        : "bg-white dark:bg-[#111213] text-black dark:text-white border-2 border-black/20 dark:border-white/20 hover:border-black hover:bg-black/5",
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div
                         className={cn(
-                          "p-2 rounded-lg",
+                          "p-1.5 border border-black",
                           isSelected
-                            ? "bg-[var(--primary)]/20 text-[var(--primary)]"
-                            : "bg-[var(--secondary)]/40 text-[var(--foreground)]",
+                            ? "bg-black text-[#E9FFA3]"
+                            : "bg-[#ECE7E0] dark:bg-black text-black dark:text-white",
                         )}
                       >
-                        <Icon className="w-4 h-4" />
+                        <IconComponent className="w-3.5 h-3.5 stroke-[2.2]" />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-[var(--foreground)]">
-                          {opt.label}
+                      <div className="min-w-0">
+                        <div className="font-brand-display font-bold text-xs tracking-tight">
+                          {option.label}
                         </div>
-                        <div className="text-[11px] text-[var(--muted-foreground)]">
-                          {opt.description}
+                        <div className="text-[11px] font-brand-sans text-[#636363] dark:text-white/60 truncate">
+                          {option.description}
                         </div>
                       </div>
                     </div>
                     {isSelected && (
-                      <Check className="w-4 h-4 text-[var(--primary)] shrink-0 ml-2" />
+                      <Check className="w-4 h-4 text-black stroke-[3] shrink-0" />
                     )}
                   </button>
                 );
@@ -199,18 +208,18 @@ export function NewFileModal({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[var(--border)]">
+          {/* Action buttons */}
+          <div className="pt-2 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]/40 transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold border-2 border-black bg-white dark:bg-[#111213] text-black dark:text-white hover:bg-black/5 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-95 border border-[var(--border)] shadow-sm transition-all duration-150 cursor-pointer"
+              className="px-5 py-2 text-xs font-bold uppercase tracking-wider bg-black text-white hover:bg-[#E9FFA3] hover:text-black border-2 border-black shadow-[3px_3px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer"
             >
               Create File
             </button>

@@ -1,6 +1,5 @@
-import { relations } from "drizzle-orm";
 import {
-  pgEnum,
+  index,
   pgTable,
   primaryKey,
   text,
@@ -8,29 +7,28 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { workspace } from "./workspaces";
 
-export const projectMemberRole = pgEnum("project_member_role", [
-  "owner",
-  "editor",
-  "viewer",
-]);
+export const project = pgTable(
+  "project",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    archivedAt: timestamp("archived_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("project_workspace_idx").on(table.workspaceId)],
+);
 
-export const project = pgTable("project", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  ownerId: text("owner_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "restrict" }),
-  archivedAt: timestamp("archived_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-export const projectMember = pgTable(
-  "project_member",
+export const projectEditor = pgTable(
+  "project_editor",
   {
     projectId: uuid("project_id")
       .notNull()
@@ -38,31 +36,10 @@ export const projectMember = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: projectMemberRole("role").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.projectId, table.userId] })],
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.userId] }),
+    index("project_editor_user_idx").on(table.userId),
+  ],
 );
-
-export const projectRelations = relations(project, ({ one, many }) => ({
-  owner: one(user, {
-    fields: [project.ownerId],
-    references: [user.id],
-  }),
-  members: many(projectMember),
-}));
-
-export const projectMemberRelations = relations(projectMember, ({ one }) => ({
-  project: one(project, {
-    fields: [projectMember.projectId],
-    references: [project.id],
-  }),
-  user: one(user, {
-    fields: [projectMember.userId],
-    references: [user.id],
-  }),
-}));

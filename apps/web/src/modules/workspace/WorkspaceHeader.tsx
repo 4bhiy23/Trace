@@ -43,14 +43,12 @@ export function WorkspaceHeader({
     { id: "all", label: "All" },
     { id: "recents", label: "Recents" },
     { id: "created-by-me", label: "Created by Me" },
-    { id: "folders", label: "Folders" },
-    { id: "unsorted", label: "Unsorted" },
   ];
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 border-b border-[var(--border)] bg-[var(--background)] transition-colors duration-200">
-      {/* Filter Tabs / Pills */}
-      <nav className="flex items-center gap-1.5" aria-label="Filter files">
+    <header className="flex flex-wrap items-center justify-between gap-3 px-6 h-14 border-b-2 border-black dark:border-white/20 bg-[#FFFEFC] dark:bg-[#111213] transition-colors duration-200 font-brand-sans shrink-0">
+      {/* Filter Tabs */}
+      <nav className="flex items-center gap-2" aria-label="Filter files">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
           return (
@@ -59,10 +57,10 @@ export function WorkspaceHeader({
               type="button"
               onClick={() => onSelectTab(tab.id)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none",
+                "px-3.5 py-1.5 text-xs font-brand-sans transition-all duration-150 cursor-pointer select-none",
                 isActive
-                  ? "bg-[var(--card)] text-[var(--foreground)] shadow-xs border border-[var(--border)] font-semibold"
-                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--card)]/50",
+                  ? "bg-[#E9FFA3] text-black border-2 border-black font-semibold shadow-[2px_2px_0px_#000000]"
+                  : "bg-white dark:bg-[#1c1d20] text-black dark:text-white border-2 border-black/30 dark:border-white/30 hover:border-black hover:bg-black/5 font-medium shadow-[1px_1px_0px_#000000]",
               )}
             >
               {tab.label}
@@ -75,53 +73,37 @@ export function WorkspaceHeader({
       <div className="flex items-center gap-3">
         {/* Search Input */}
         <div className="relative flex items-center">
-          <Search className="absolute left-2.5 w-3.5 h-3.5 text-[var(--muted-foreground)] pointer-events-none" />
+          <Search className="absolute left-3 w-3.5 h-3.5 text-[#636363] dark:text-white/60 pointer-events-none" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search"
+            placeholder="Search canvases..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-48 sm:w-56 pl-8 pr-12 py-1.5 text-xs rounded-lg bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] placeholder:text-[var(--muted-foreground)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all"
+            className="w-48 sm:w-56 pl-8 pr-10 py-1.5 text-xs bg-white dark:bg-[#1c1d20] text-black dark:text-white border-2 border-black dark:border-white/30 placeholder:text-[#636363] shadow-[2px_2px_0px_#000000] focus:outline-none focus:shadow-[3px_3px_0px_#000000] transition-all font-brand-sans"
           />
-          <div className="absolute right-2 flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-[var(--secondary)]/60 text-[var(--muted-foreground)] border border-[var(--border)]/40 pointer-events-none">
+          <div className="absolute right-2.5 flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 text-[10px] font-roboto-mono bg-[#ECE7E0] dark:bg-black text-black dark:text-white border border-black/40 font-semibold pointer-events-none">
               /
             </kbd>
           </div>
         </div>
 
-        {/* Team Avatars */}
-        <div
-          className="hidden sm:flex items-center -space-x-1.5 cursor-pointer group"
-          onClick={onOpenInviteModal}
-          title="Team members"
-        >
-          <div className="w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-[var(--background)]">
-            SG
-          </div>
-          <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-[var(--background)]">
-            AL
-          </div>
-          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-[var(--background)]">
-            JD
-          </div>
-        </div>
 
         {/* Invite Button */}
         <button
           type="button"
           onClick={onOpenInviteModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-95 border border-[var(--border)] shadow-xs transition-all duration-150 cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-black text-white hover:bg-[#E9FFA3] hover:text-black border-2 border-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
         >
-          <Send className="w-3 h-3" />
+          <Send className="w-3 h-3 stroke-[2.2]" />
           <span>Invite</span>
         </button>
 
         {/* Theme Toggle Button */}
         <ThemeToggle
           variant="circle"
-          className="p-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card)]/80 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
+          className="p-1.5 border-2 border-black bg-white dark:bg-[#1c1d20] shadow-[2px_2px_0px_#000000] hover:bg-[#E9FFA3] dark:hover:bg-[#E9FFA3] text-black dark:text-white dark:hover:text-black transition-colors cursor-pointer"
         />
       </div>
     </header>

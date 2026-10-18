@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "typecheck": "tsc",
+    "test": "tsx --test src/shared/auth/workspace-permissions.test.ts src/modules/docs/openapi.test.ts src/modules/workspaces/workspace.email.test.ts",
     "auth:generate": "pnpm dlx auth@latest generate --adapter drizzle --dialect postgresql --config src/modules/auth/auth.ts --output src/db/schema/auth.ts --yes"
   },
   "dependencies": {

@@ -9,13 +9,10 @@ import {
   Code,
   ArrowUpDown,
   MoreHorizontal,
-  Folder as FolderIcon,
   Trash2,
   Copy,
   Edit3,
-  Archive,
   ExternalLink,
-  MessageSquare,
 } from "lucide-react";
 import { WorkspaceFile, CanvasType, SortField, SortDirection } from "./types";
 import { cn } from "@/lib/utils";
@@ -28,7 +25,6 @@ interface FilesTableProps {
   onOpenFile: (file: WorkspaceFile) => void;
   onDeleteFile: (fileId: string) => void;
   onDuplicateFile: (file: WorkspaceFile) => void;
-  onArchiveFile: (fileId: string) => void;
   onRenameFile: (fileId: string, newName: string) => void;
 }
 
@@ -39,7 +35,6 @@ export function FilesTable({
   onOpenFile,
   onDeleteFile,
   onDuplicateFile,
-  onArchiveFile,
   onRenameFile,
   onSort,
 }: FilesTableProps) {
@@ -47,20 +42,60 @@ export function FilesTable({
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const getCanvasIcon = (type: CanvasType) => {
+  const getCanvasTypeLabel = (type: CanvasType) => {
     switch (type) {
       case "architecture":
-        return <Layers className="w-4 h-4 text-sky-500" />;
+        return "Architecture";
       case "flow":
-        return <GitFork className="w-4 h-4 text-emerald-500" />;
+        return "Flow";
       case "dbml":
-        return <Database className="w-4 h-4 text-purple-500" />;
+        return "DBML";
       case "uml":
-        return <Code className="w-4 h-4 text-indigo-500" />;
+        return "UML";
       case "markdown":
       default:
-        return <FileText className="w-4 h-4 text-[var(--chart-1)]" />;
+        return "Markdown";
     }
+  };
+
+  const getCanvasTypeIcon = (type: CanvasType, className = "w-3.5 h-3.5") => {
+    switch (type) {
+      case "architecture":
+        return <Layers className={className} />;
+      case "flow":
+        return <GitFork className={className} />;
+      case "dbml":
+        return <Database className={className} />;
+      case "uml":
+        return <Code className={className} />;
+      case "markdown":
+      default:
+        return <FileText className={className} />;
+    }
+  };
+
+  const getCanvasTypeBadge = (type: CanvasType) => {
+    let colorClasses = "bg-white text-black border-black";
+    if (type === "architecture")
+      colorClasses = "bg-[#D3B8FC] text-black border-black";
+    else if (type === "flow")
+      colorClasses = "bg-[#E9FFA3] text-black border-black";
+    else if (type === "dbml")
+      colorClasses = "bg-[#FF9369] text-black border-black";
+    else if (type === "uml")
+      colorClasses = "bg-[#CFF266] text-black border-black";
+
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-roboto-mono uppercase tracking-wider font-semibold border",
+          colorClasses,
+        )}
+      >
+        {getCanvasTypeIcon(type, "w-3 h-3 stroke-[2.2]")}
+        <span>{getCanvasTypeLabel(type)}</span>
+      </span>
+    );
   };
 
   const handleStartRename = (file: WorkspaceFile) => {
@@ -78,73 +113,84 @@ export function FilesTable({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[5px_6px_0px_0px_rgba(0,0,0,0.14)] font-brand-sans">
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold tracking-wider uppercase text-[var(--muted-foreground)]/80 border-b border-[var(--border)] select-none">
+      <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-brand-sans font-bold uppercase tracking-wider text-black dark:text-white bg-[#ECE7E0] dark:bg-[#202227] border-b-2 border-black dark:border-white/30 select-none">
         <div
-          className="col-span-4 flex items-center gap-1.5 cursor-pointer hover:text-[var(--foreground)] transition-colors"
+          className="col-span-5 flex items-center gap-1.5 cursor-pointer hover:underline"
           onClick={() => onSort("name")}
         >
           <span>Name</span>
           {sortField === "name" && (
-            <span className="text-xs">
+            <span className="text-xs font-bold text-black dark:text-white">
               {sortDirection === "asc" ? "↑" : "↓"}
             </span>
           )}
         </div>
-        <div className="col-span-2 hidden md:block">Location</div>
         <div
-          className="col-span-2 hidden sm:block cursor-pointer hover:text-[var(--foreground)] transition-colors"
+          className="col-span-2 hidden md:flex items-center gap-1.5 cursor-pointer hover:underline"
+          onClick={() => onSort("type")}
+        >
+          <span>Canvas Type</span>
+          {sortField === "type" && (
+            <span className="text-xs font-bold text-black dark:text-white">
+              {sortDirection === "asc" ? "↑" : "↓"}
+            </span>
+          )}
+        </div>
+        <div
+          className="col-span-2 hidden sm:block cursor-pointer hover:underline"
           onClick={() => onSort("created")}
         >
           <span>Created</span>
           {sortField === "created" && (
-            <span className="text-xs">
+            <span className="text-xs font-bold text-black dark:text-white">
               {sortDirection === "asc" ? "↑" : "↓"}
             </span>
           )}
         </div>
         <div
-          className="col-span-2 flex items-center gap-1.5 cursor-pointer hover:text-[var(--foreground)] transition-colors"
+          className="col-span-2 flex items-center gap-1.5 cursor-pointer hover:underline"
           onClick={() => onSort("edited")}
         >
-          <ArrowUpDown className="w-3 h-3" />
+          <ArrowUpDown className="w-3.5 h-3.5" />
           <span>Edited</span>
           {sortField === "edited" && (
-            <span className="text-xs">
+            <span className="text-xs font-bold text-black dark:text-white">
               {sortDirection === "asc" ? "↑" : "↓"}
             </span>
           )}
         </div>
-        <div className="col-span-1 text-center hidden lg:block">Comments</div>
         <div className="col-span-1 text-right">Author</div>
       </div>
 
       {/* Table Rows */}
       {files.length === 0 ? (
-        <div className="py-16 text-center text-xs text-[var(--muted-foreground)]">
-          <p className="font-medium">No files found</p>
-          <p className="text-[11px] mt-1 text-[var(--muted-foreground)]/70">
-            Create a new blank canvas or change your search filter.
+        <div className="py-16 text-center text-xs text-[#636363] dark:text-white/60">
+          <p className="font-brand-display font-bold text-base text-black dark:text-white">
+            No canvases found
+          </p>
+          <p className="text-xs font-roboto-mono mt-1 text-[#636363] dark:text-white/60">
+            Create a new blank canvas or adjust your active filters.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-[var(--border)]/40">
+        <div className="divide-y divide-black/15 dark:divide-white/10">
           {files.map((file) => {
             const isMenuOpen = activeMenuId === file.id;
 
             return (
               <div
                 key={file.id}
-                className="group relative grid grid-cols-12 gap-3 px-4 py-3 items-center text-xs hover:bg-[var(--card)]/50 transition-colors duration-150 rounded-lg cursor-pointer"
+                className="group relative grid grid-cols-12 gap-3 px-4 py-3 items-center text-xs hover:bg-[#fafbe9] dark:hover:bg-[#202227]/80 transition-colors duration-150 cursor-pointer"
                 onClick={() => {
                   if (!editingFileId) onOpenFile(file);
                 }}
               >
                 {/* Name & Icon */}
-                <div className="col-span-4 flex items-center gap-3 min-w-0 pr-2">
-                  <div className="shrink-0 p-1.5 rounded-md bg-[var(--secondary)]/30 border border-[var(--border)]/40">
-                    {getCanvasIcon(file.type)}
+                <div className="col-span-5 flex items-center gap-3 min-w-0 pr-2">
+                  <div className="shrink-0 p-1.5 border border-black bg-white dark:bg-black text-black dark:text-white shadow-[1px_1px_0px_#000000]">
+                    {getCanvasTypeIcon(file.type, "w-3.5 h-3.5 stroke-[2.2]")}
                   </div>
 
                   {editingFileId === file.id ? (
@@ -159,50 +205,35 @@ export function FilesTable({
                         if (e.key === "Enter") handleFinishRename(file.id);
                         if (e.key === "Escape") setEditingFileId(null);
                       }}
-                      className="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--primary)] text-xs text-[var(--foreground)] outline-none"
+                      className="px-2 py-1 bg-white border-2 border-black text-xs text-black outline-none font-brand-sans"
                     />
                   ) : (
-                    <span className="font-medium text-[var(--foreground)] truncate group-hover:text-[var(--primary)] transition-colors">
+                    <span className="font-brand-display font-semibold text-xs sm:text-sm text-black dark:text-white truncate group-hover:underline">
                       {file.name}
                     </span>
                   )}
                 </div>
 
-                {/* Location */}
-                <div className="col-span-2 hidden md:flex items-center gap-1.5 text-[var(--muted-foreground)]">
-                  {file.location ? (
-                    <div className="flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-[var(--secondary)]/40">
-                      <FolderIcon className="w-3 h-3 opacity-60" />
-                      <span className="truncate">{file.location}</span>
-                    </div>
-                  ) : (
-                    <span className="text-[var(--muted-foreground)]/50">—</span>
-                  )}
+                {/* Canvas Type */}
+                <div className="col-span-2 hidden md:flex items-center">
+                  {getCanvasTypeBadge(file.type)}
                 </div>
 
                 {/* Created */}
-                <div className="col-span-2 hidden sm:block text-[var(--muted-foreground)]">
+                <div className="col-span-2 hidden sm:block font-roboto-mono text-xs text-[#636363] dark:text-white/60">
                   {file.createdAt}
                 </div>
 
                 {/* Edited */}
-                <div className="col-span-2 text-[var(--muted-foreground)]">
+                <div className="col-span-2 font-roboto-mono text-xs font-medium text-black dark:text-white">
                   {file.editedAt}
-                </div>
-
-                {/* Comments */}
-                <div className="col-span-1 hidden lg:flex items-center justify-center text-[var(--muted-foreground)] gap-1">
-                  {file.commentsCount > 0 && (
-                    <MessageSquare className="w-3 h-3 opacity-70" />
-                  )}
-                  <span>{file.commentsCount}</span>
                 </div>
 
                 {/* Author & Action Menu */}
                 <div className="col-span-1 flex items-center justify-end gap-2">
                   <div
                     className={cn(
-                      "w-6 h-6 rounded-full text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs",
+                      "w-6 h-6 rounded-full text-white flex items-center justify-center text-[10px] font-brand-display font-bold shrink-0 border-2 border-black",
                       file.author.color,
                     )}
                     title={file.author.name}
@@ -221,9 +252,9 @@ export function FilesTable({
                       onClick={() =>
                         setActiveMenuId(isMenuOpen ? null : file.id)
                       }
-                      className="p-1 rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]/60 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                      className="p-1 border border-black/30 hover:border-black hover:bg-[#E9FFA3] hover:text-black text-black dark:text-white transition-colors cursor-pointer"
                     >
-                      <MoreHorizontal className="w-4 h-4" />
+                      <MoreHorizontal className="w-3.5 h-3.5 stroke-[2.2]" />
                     </button>
 
                     {/* Popover Action Menu */}
@@ -233,14 +264,14 @@ export function FilesTable({
                           className="fixed inset-0 z-40"
                           onClick={() => setActiveMenuId(null)}
                         />
-                        <div className="absolute right-0 top-full mt-1 z-50 w-44 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl p-1.5 text-xs animate-in fade-in-50 zoom-in-95 duration-150">
+                        <div className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/40 shadow-[5px_6px_0px_0px_#000000] p-1.5 text-xs animate-in fade-in-50 zoom-in-95 duration-150">
                           <button
                             type="button"
                             onClick={() => {
                               onOpenFile(file);
                               setActiveMenuId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--secondary)]/40 transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 font-medium text-black dark:text-white hover:bg-[#E9FFA3] hover:text-black border border-transparent hover:border-black transition-colors cursor-pointer"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             <span>Open Canvas</span>
@@ -248,7 +279,7 @@ export function FilesTable({
                           <button
                             type="button"
                             onClick={() => handleStartRename(file)}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--secondary)]/40 transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 font-medium text-black dark:text-white hover:bg-[#E9FFA3] hover:text-black border border-transparent hover:border-black transition-colors cursor-pointer"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                             <span>Rename</span>
@@ -259,30 +290,19 @@ export function FilesTable({
                               onDuplicateFile(file);
                               setActiveMenuId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--secondary)]/40 transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 font-medium text-black dark:text-white hover:bg-[#E9FFA3] hover:text-black border border-transparent hover:border-black transition-colors cursor-pointer"
                           >
                             <Copy className="w-3.5 h-3.5" />
                             <span>Duplicate</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onArchiveFile(file.id);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--secondary)]/40 transition-colors cursor-pointer"
-                          >
-                            <Archive className="w-3.5 h-3.5" />
-                            <span>Archive</span>
-                          </button>
-                          <div className="border-t border-[var(--border)] my-1" />
+                          <div className="border-t-2 border-black/15 dark:border-white/15 my-1" />
                           <button
                             type="button"
                             onClick={() => {
                               onDeleteFile(file.id);
                               setActiveMenuId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 font-bold text-red-600 hover:bg-red-500 hover:text-white border border-transparent hover:border-black transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>Delete</span>

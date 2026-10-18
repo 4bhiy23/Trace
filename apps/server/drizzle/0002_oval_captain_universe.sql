@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workspace_member_owner_unique" ON "workspace_member" USING btree ("workspace_id") WHERE "workspace_member"."role" = 'owner';
