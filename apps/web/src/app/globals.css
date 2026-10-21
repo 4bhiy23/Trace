@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap");
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
 
@@ -153,6 +154,7 @@
   --font-brand-display: "brandDisplay", system-ui, -apple-system, sans-serif;
   --font-brand-sans: "brandSans", system-ui, -apple-system, sans-serif;
   --font-roboto-mono: "Roboto Mono", monospace;
+  --font-handwriting: "Caveat", cursive, sans-serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -422,7 +424,7 @@ html.dark body::before,
     14px 16px 25px rgba(0, 0, 0, 0.85);
 }
 
-/* MailerBot Workspace Brutalist Tokens & Patterns */
+/* Trace Workspace Brutalist Tokens & Patterns */
 .grid-paper {
   --grid-stroke: #ece7e0;
   --grid-cell: 96px;
@@ -466,4 +468,179 @@ html.dark body::before,
   stroke-dasharray: 6 5;
   animation: 0.45s linear infinite dash-march;
   will-change: stroke-dashoffset;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRACE PAPER SHEET PROTOTYPE (paper-edge-prototype-large.html)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.sheet {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.edge {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(4px 5px 0 rgba(120, 95, 50, 0.16));
+}
+
+.edge .fill {
+  fill: #ffffff;
+  stroke: none;
+}
+
+.dark .edge .fill {
+  fill: #18191c;
+}
+
+.edge .l1 {
+  fill: none;
+  stroke: var(--ink, #111);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.edge .l2 {
+  fill: none;
+  stroke: var(--ink, #111);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
+}
+
+.rings {
+  position: absolute;
+  left: 4px;
+  top: 24px;
+  bottom: 24px;
+  width: 42px;
+  background-repeat: repeat-y;
+  background-size: 42px 58px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='58' viewBox='0 0 42 58'%3E%3Cpath d='M0 20 C8 20 13 22.5 13 29 C13 35.5 8 38 0 38' fill='none' stroke='%23111' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='29' r='10' fill='%23D9D5CD' stroke='%23111' stroke-width='2.3'/%3E%3Cpath d='M17 33.5 A6.8 6.8 0 0 0 27 35.5' fill='none' stroke='%23fff' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  z-index: 10;
+  pointer-events: none;
+}
+
+.tape {
+  position: absolute;
+  width: 72px;
+  height: 26px;
+  background: rgba(230, 207, 166, 0.92);
+  clip-path: polygon(
+    0 0,
+    3% 12%,
+    0 25%,
+    3% 38%,
+    0 50%,
+    3% 63%,
+    0 75%,
+    3% 88%,
+    0 100%,
+    100% 100%,
+    97% 88%,
+    100% 75%,
+    97% 63%,
+    100% 50%,
+    97% 38%,
+    100% 25%,
+    97% 12%,
+    100% 0
+  );
+  z-index: 20;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+}
+
+.paper-sheet__tape--tr {
+  top: -12px;
+  right: 18px;
+  transform: rotate(4deg);
+}
+
+.paper-sheet__tape--tl {
+  top: -12px;
+  left: 40px;
+  transform: rotate(-4deg);
+}
+
+.paper-sheet__clip {
+  position: absolute;
+  top: -22px;
+  left: 28px;
+  transform: rotate(-8deg);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.paper-sheet__body {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ruled-paper canvas background (§13.4) */
+.app-canvas {
+  background-color: var(--paper, #fffefc);
+  background-image:
+    linear-gradient(to right, var(--paper-shade, #ece7e0) 1px, transparent 1px),
+    linear-gradient(var(--paper-shade, #ece7e0) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dark .app-canvas {
+  background-color: #0c0d0e;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Hand-drawn note and sparks (§13.3) */
+.hand-note {
+  position: absolute;
+  right: -130px;
+  top: 30px;
+  transform: rotate(-16deg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.hand-note span {
+  display: block;
+  font: 400 22px/1.05 var(--font-handwriting, "Caveat", cursive);
+  width: 90px;
+  color: var(--ink, #000000);
+}
+
+.sparks--tl {
+  position: absolute;
+  top: 6px;
+  left: -14px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.sparks--tr {
+  position: absolute;
+  top: 6px;
+  right: -14px;
+  transform: scaleX(-1);
+  pointer-events: none;
+  z-index: 20;
+}
+
+@media (max-width: 600px) {
+  .paper-sheet__rings,
+  .tape,
+  .paper-sheet__clip,
+  .hand-note {
+    display: none !important;
+  }
 }

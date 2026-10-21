@@ -2,14 +2,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectApi } from "../api/project.api";
 import { projectKeys } from "./project.keys";
 import type {
+  Project,
   CreateProjectInput,
   UpdateProjectInput,
   AddProjectEditorInput,
 } from "../types/project.types";
 
-/**
- * Mutation hook to create a new project in a workspace.
- */
+// Mutation hook to create
 export function useCreateProject(workspaceId: string) {
   const queryClient = useQueryClient();
 
@@ -25,9 +24,6 @@ export function useCreateProject(workspaceId: string) {
   });
 }
 
-/**
- * Mutation hook to update/rename a project.
- */
 export function useUpdateProject(workspaceId?: string) {
   const queryClient = useQueryClient();
 
@@ -52,15 +48,24 @@ export function useUpdateProject(workspaceId?: string) {
   });
 }
 
-/**
- * Mutation hook to archive (delete) a project.
- */
+
 export function useArchiveProject(workspaceId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (projectId: string) => projectApi.archive(projectId),
     onSuccess: (_data, projectId) => {
+      queryClient.setQueryData<Project[]>(
+        projectKeys.listByWorkspace(workspaceId),
+        (old) =>
+          old
+            ? old.map((p) =>
+                p.id === projectId
+                  ? { ...p, archivedAt: new Date().toISOString() }
+                  : p,
+              )
+            : [],
+      );
       queryClient.invalidateQueries({
         queryKey: projectKeys.listByWorkspace(workspaceId),
       });
@@ -69,9 +74,7 @@ export function useArchiveProject(workspaceId: string) {
   });
 }
 
-/**
- * Mutation hook to add an explicit editor to a project.
- */
+
 export function useAddProjectEditor(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -86,9 +89,7 @@ export function useAddProjectEditor(projectId: string) {
   });
 }
 
-/**
- * Mutation hook to remove an explicit editor from a project.
- */
+
 export function useRemoveProjectEditor(projectId: string) {
   const queryClient = useQueryClient();
 

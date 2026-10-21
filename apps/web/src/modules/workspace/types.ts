@@ -1,12 +1,13 @@
 export type CanvasType = "markdown" | "architecture" | "flow" | "dbml" | "uml";
 export type Role = "owner" | "editor" | "viewer";
-export type AccessPermission = "workspace" | "private";
+export type AccessPermission = "editor" | "viewer" | "workspace" | "private";
 
 export interface WorkspaceFile {
   id: string;
   name: string;
   type: CanvasType;
   projectId: string;
+  description?: string;
   location?: string | null;
   createdAt: string; // e.g. "1 week ago"
   createdTimestamp: number;
@@ -33,9 +34,11 @@ export interface ProjectMemberAssignment {
 export interface WorkspaceProject {
   id: string;
   name: string;
+  description?: string;
   count: number;
   access?: AccessPermission;
   members?: ProjectMemberAssignment[];
+  archivedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   updatedTimestamp?: number;

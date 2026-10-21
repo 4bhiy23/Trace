@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import {
   LayoutGrid,
-  FolderKanban,
+  Folder,
   Plus,
   ChevronDown,
   LogOut,
@@ -12,6 +12,8 @@ import {
   Layers,
   Users,
   User,
+  Archive,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthGuard";
 import { WorkspaceProject, WorkspaceItem } from "./types";
@@ -21,24 +23,28 @@ interface WorkspaceSidebarProps {
   currentView: string;
   onSelectView: (view: string) => void;
   projects: WorkspaceProject[];
-  onOpenNewProjectModal: () => void;
+  archivedProjectsCount?: number;
+  onOpenNewProjectModal?: () => void;
   onOpenNewFileModal: () => void;
   workspaces: WorkspaceItem[];
   activeWorkspaceId: string;
   onSelectWorkspace: (workspaceId: string) => void;
   onOpenNewWorkspaceModal: () => void;
+  onDeleteWorkspace?: (workspace: WorkspaceItem) => void;
 }
 
 export function WorkspaceSidebar({
   currentView,
   onSelectView,
   projects,
+  archivedProjectsCount = 0,
   onOpenNewProjectModal,
   onOpenNewFileModal,
   workspaces,
   activeWorkspaceId,
   onSelectWorkspace,
   onOpenNewWorkspaceModal,
+  onDeleteWorkspace,
 }: WorkspaceSidebarProps) {
   const { user, signOut } = useAuth();
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
@@ -50,49 +56,139 @@ export function WorkspaceSidebar({
   const collabWorkspaces = workspaces.filter((w) => !w.isDefault);
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col h-screen border-r-2 border-black bg-[#ECE7E0] dark:bg-[#141416] text-black dark:text-white select-none transition-colors duration-200 font-brand-sans">
-      {/* 1. TOP LEFT CORNER: TRACE LOGO (Matches top header line) */}
-      <div className="h-14 px-4 bg-white dark:bg-[#111213] border-b-2 border-black dark:border-white/20 flex items-center justify-center shrink-0">
+    <aside className="w-[296px] shrink-0 flex flex-col h-screen border-r-2 border-black bg-[#FAF7F2] dark:bg-[#141416] grid-paper text-black dark:text-white select-none transition-colors duration-200 font-brand-sans">
+
+      <svg
+        width="0"
+        height="0"
+        className="absolute pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="sb-r1" x="-5%" y="-10%" width="110%" height="120%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.045 0.07"
+              numOctaves="3"
+              seed="5"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="2.8"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+          <filter id="sb-r2" x="-5%" y="-10%" width="110%" height="120%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.05 0.08"
+              numOctaves="3"
+              seed="13"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="3.2"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+
+      <style>{`
+        .sb-rough {
+          position: relative;
+          isolation: isolate;
+          --fill: #ffffff;
+          --sx: 3px;
+          --sy: 3px;
+        }
+        .sb-rough::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: var(--fill);
+          border: 2px solid #111;
+          border-radius: 2px;
+          filter: url(#sb-r1);
+        }
+        .sb-rough::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -2;
+          background: #111;
+          border-radius: 2px;
+          transform: translate(var(--sx), var(--sy));
+          filter: url(#sb-r2);
+        }
+        .sb-rough-lime {
+          --fill: #e9ffa3;
+        }
+        .sb-rough:active {
+          transform: translate(1.5px, 1.5px);
+          --sx: 1.5px;
+          --sy: 1.5px;
+        }
+      `}</style>
+
+   
+      <div className="h-14 px-4 border-b-2 border-black dark:border-white/20 flex items-center justify-start shrink-0">
         <button
           type="button"
           onClick={() => onSelectView("dashboard")}
-          className="flex items-center justify-center cursor-pointer focus:outline-none transition-transform hover:scale-[1.02] active:scale-[0.98]"
-          aria-label="Trace home"
+          className="flex items-center cursor-pointer focus:outline-none transition-opacity hover:opacity-80 active:opacity-60"
+          aria-label="Trace Home"
         >
           <Image
             src="/trace_logo.png"
-            alt="TRACE"
-            width={160}
-            height={54}
+            alt="Trace"
+            width={100}
+            height={33}
             priority
-            className="h-10 sm:h-11 w-auto max-w-[160px] object-contain dark:invert select-none"
+            className="h-7 w-auto object-contain dark:invert"
           />
         </button>
       </div>
 
-      {/* 2. WORKSPACE SWITCHER & PRIMARY ACTION */}
-      <div className="p-3 border-b-2 border-black/15 dark:border-white/15 space-y-2.5 shrink-0">
-        {/* Workspace Switcher Selector */}
+      {/* 1. TOP: WORKSPACE SWITCHER CARD */}
+      <div className="pt-5 px-3.5 pb-2 shrink-0">
         <div className="relative">
           <button
             type="button"
             onClick={() => setTeamMenuOpen(!teamMenuOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-[#1c1d20] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000000] hover:bg-black/5 dark:hover:bg-white/10 transition-colors group cursor-pointer"
+            className="sb-rough w-full flex items-center justify-between px-2.5 py-2.5 cursor-pointer text-black"
+            style={
+              {
+                "--fill": "#ffffff",
+                "--sx": "2.5px",
+                "--sy": "2.5px",
+              } as React.CSSProperties
+            }
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <Layers className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
-              <span className="font-brand-sans font-bold text-xs truncate text-black dark:text-white">
-                {activeWorkspace?.name || "Select Workspace"}
+            <div className="flex items-center gap-2 min-w-0 flex-1 mr-1">
+              <Layers className="w-4 h-4 shrink-0 stroke-[2.2]" />
+              <span className="font-sans font-bold text-xs truncate text-black">
+                {activeWorkspace?.name || user?.name || "Workspace"}
               </span>
-              {activeWorkspace?.isDefault && (
-                <span className="px-1 py-0.2 text-[9px] font-roboto-mono uppercase bg-black/5 dark:bg-white/10 text-black/70 dark:text-white/70 border border-black/20 dark:border-white/20 shrink-0">
-                  Private
-                </span>
-              )}
+              <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase bg-[#ECE7E0] text-black shrink-0 border border-black/30 rounded-[2px] ml-auto">
+                {activeWorkspace?.isDefault
+                  ? "PRIVATE"
+                  : activeWorkspace?.role === "owner"
+                    ? "OWNER"
+                    : activeWorkspace?.role?.toUpperCase() || "COLLAB"}
+              </span>
             </div>
             <ChevronDown
               className={cn(
-                "w-3.5 h-3.5 text-black dark:text-white transition-transform duration-200 shrink-0",
+                "w-3.5 h-3.5 text-black transition-transform duration-200 shrink-0",
                 teamMenuOpen && "rotate-180",
               )}
             />
@@ -105,20 +201,14 @@ export function WorkspaceSidebar({
                 className="fixed inset-0 z-40"
                 onClick={() => setTeamMenuOpen(false)}
               />
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#1c1d20] border-2 border-black dark:border-white/30 shadow-[5px_6px_0px_0px_rgba(0,0,0,0.14)] p-2 animate-in fade-in-50 zoom-in-95 duration-150">
-                <div className="text-[10px] font-roboto-mono uppercase tracking-[0.2em] text-[#636363] dark:text-white/60 px-2 py-1 font-bold">
+              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#FAF5EC] dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[5px_6px_0px_#000000] p-2.5 animate-in fade-in-50 zoom-in-95 duration-150 rounded-[3px]">
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#636056] dark:text-white/60 px-2 py-1 font-bold">
                   WORKSPACES
                 </div>
 
                 {/* Default User Private Workspace */}
                 {defaultWorkspace && (
                   <div className="mb-1.5">
-                    <div className="text-[9px] font-roboto-mono uppercase tracking-wider text-[#888888] dark:text-white/40 px-2 py-0.5 font-bold flex items-center justify-between">
-                      <span>DEFAULT PRIVATE</span>
-                      <span className="px-1 py-0.2 text-[8px] bg-black/5 dark:bg-white/10 text-black/70 dark:text-white/70 font-semibold border border-black/20 dark:border-white/20">
-                        PRIVATE
-                      </span>
-                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -126,10 +216,10 @@ export function WorkspaceSidebar({
                         setTeamMenuOpen(false);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer border-2",
+                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer border-2 rounded-[2px]",
                         activeWorkspaceId === defaultWorkspace.id
-                          ? "bg-[#E9FFA3] text-black border-black shadow-[1px_1px_0px_#000000]"
-                          : "text-black/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 border-transparent hover:border-black/30",
+                          ? "bg-[#E9FFA3] text-black border-black shadow-[2px_2px_0px_#000000]"
+                          : "bg-white dark:bg-[#1f2024] text-black/80 dark:text-white/80 hover:bg-[#E9FFA3]/40 border-black/30 hover:border-black",
                       )}
                     >
                       <div className="flex items-center gap-2 truncate">
@@ -139,7 +229,7 @@ export function WorkspaceSidebar({
                         </span>
                       </div>
                       {activeWorkspaceId === defaultWorkspace.id && (
-                        <span className="w-1.5 h-1.5 bg-black shrink-0" />
+                        <span className="w-2 h-2 bg-black shrink-0" />
                       )}
                     </button>
                   </div>
@@ -147,63 +237,71 @@ export function WorkspaceSidebar({
 
                 {/* Collaboration Workspaces */}
                 {collabWorkspaces.length > 0 && (
-                  <div className="mb-1.5">
-                    <div className="text-[9px] font-roboto-mono uppercase tracking-wider text-[#888888] dark:text-white/40 px-2 py-0.5 font-bold flex items-center justify-between">
-                      <span>COLLAB WORKSPACES</span>
-                      <span className="px-1 py-0.2 text-[8px] bg-[#D3B8FC]/40 text-black dark:text-white font-semibold border border-black/20 dark:border-white/20">
-                        TEAM
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      {collabWorkspaces.map((ws) => {
-                        const isActive = activeWorkspaceId === ws.id;
-                        return (
+                  <div className="space-y-1 mb-1.5">
+                    {collabWorkspaces.map((ws) => {
+                      const isActive = activeWorkspaceId === ws.id;
+                      const isOwner = ws.role === "owner";
+                      return (
+                        <div
+                          key={ws.id}
+                          className={cn(
+                            "group/ws w-full flex items-center justify-between px-2 py-1.5 text-xs font-bold transition-all border-2 rounded-[2px]",
+                            isActive
+                              ? "bg-[#E9FFA3] text-black border-black shadow-[2px_2px_0px_#000000]"
+                              : "bg-white dark:bg-[#1f2024] text-black/80 dark:text-white/80 hover:bg-[#E9FFA3]/40 border-black/30 hover:border-black",
+                          )}
+                        >
                           <button
-                            key={ws.id}
                             type="button"
                             onClick={() => {
                               onSelectWorkspace(ws.id);
                               setTeamMenuOpen(false);
                             }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer border-2",
-                              isActive
-                                ? "bg-[#E9FFA3] text-black border-black font-semibold shadow-[1px_1px_0px_#000000]"
-                                : "text-black/80 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 border-transparent hover:border-black/30",
-                            )}
+                            className="flex items-center gap-2 truncate flex-1 text-left cursor-pointer min-w-0"
                           >
-                            <div className="flex items-center gap-2 truncate">
-                              <Users className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
-                              <span className="truncate">{ws.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9px] uppercase font-roboto-mono px-1 border border-black/20 text-[#636363] dark:text-white/60">
-                                {ws.role}
-                              </span>
-                              {isActive && (
-                                <span className="w-1.5 h-1.5 bg-black shrink-0" />
-                              )}
-                            </div>
+                            <Users className="w-3.5 h-3.5 shrink-0 stroke-[2.2]" />
+                            <span className="truncate">{ws.name}</span>
                           </button>
-                        );
-                      })}
-                    </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                            {isOwner && onDeleteWorkspace && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTeamMenuOpen(false);
+                                  onDeleteWorkspace(ws);
+                                }}
+                                title="Delete workspace (owner only)"
+                                aria-label={`Delete ${ws.name}`}
+                                className="opacity-0 group-hover/ws:opacity-100 hover:!opacity-100 p-0.5 rounded text-black/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 stroke-[2.2]" />
+                              </button>
+                            )}
+                            {isActive && (
+                              <span className="w-2 h-2 bg-black shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* Divider */}
-                <div className="border-t-2 border-black/15 dark:border-white/15 my-1.5" />
+         
+                <div className="border-t-[1.5px] border-black/30 dark:border-white/20 my-1.5" />
 
-                {/* + Add Workspace button (replaces + Create New Project) */}
+               
                 <button
                   type="button"
                   onClick={() => {
                     setTeamMenuOpen(false);
                     onOpenNewWorkspaceModal();
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-bold text-black dark:text-white hover:bg-[#E9FFA3] hover:text-black hover:border-black border-2 border-transparent transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-black bg-[#E9FFA3] hover:bg-[#ddfc78] border-2 border-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer rounded-[2px]"
                 >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
                   <span>Add Workspace</span>
                 </button>
               </div>
@@ -212,73 +310,174 @@ export function WorkspaceSidebar({
         </div>
       </div>
 
-      {/* 3. OVERVIEW & PROJECTS SECTIONS */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-5">
-        {/* OVERVIEW SECTION */}
+
+      <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-6">
+
         <div>
-          <div className="px-2 py-1 mb-1.5 font-brand-sans text-xs font-bold uppercase tracking-wider text-black dark:text-white">
-            OVERVIEW
+ 
+          <div className="flex items-center gap-2 mb-2.5 px-0.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-black dark:text-white shrink-0">
+              OVERVIEW
+            </span>
+            <div className="flex-1 border-b-2 border-dashed border-black/40 dark:border-white/40 h-0" />
           </div>
-          <div className="space-y-1">
-            {/* Dashboard (Matches Dashboard active button in screenshot) */}
-            <button
-              type="button"
-              onClick={() => onSelectView("dashboard")}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 text-sm transition-all duration-150 cursor-pointer font-brand-sans rounded-none",
-                currentView === "dashboard" || currentView === "all"
-                  ? "bg-[#E9FFA3] text-black border-2 border-black font-semibold shadow-[2px_2px_0px_#000000]"
-                  : "bg-transparent text-black dark:text-white border-2 border-transparent hover:bg-[#E9FFA3]/40 hover:border-black/30 font-normal",
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <LayoutGrid className="w-4 h-4 stroke-[2]" />
-                <span className="tracking-tight">Dashboard</span>
-              </div>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-roboto-mono bg-white dark:bg-[#252528] text-black dark:text-white border border-black/40 font-semibold shadow-2xs">
-                D
-              </kbd>
-            </button>
+
+          <div className="space-y-1.5">
+      
+            {currentView === "dashboard" || currentView === "all" ? (
+              <button
+                type="button"
+                onClick={() => onSelectView("dashboard")}
+                className="sb-rough sb-rough-lime w-full flex items-center justify-between px-3 py-2.5 cursor-pointer font-sans text-xs font-bold text-black"
+                style={
+                  {
+                    "--sx": "2.5px",
+                    "--sy": "2.5px",
+                  } as React.CSSProperties
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
+                  <span>Dashboard</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white text-black border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
+                  D
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSelectView("dashboard")}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs transition-all duration-150 cursor-pointer font-sans font-medium text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-[2px]"
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutGrid className="w-4 h-4 stroke-[2]" />
+                  <span>Dashboard</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white text-black border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
+                  D
+                </span>
+              </button>
+            )}
+
+            {/* Archived Tab Button */}
+            {currentView === "archived" ? (
+              <button
+                type="button"
+                onClick={() => onSelectView("archived")}
+                className="sb-rough sb-rough-lime w-full flex items-center justify-between px-3 py-2.5 cursor-pointer font-sans text-xs font-bold text-black"
+                style={
+                  {
+                    "--sx": "2.5px",
+                    "--sy": "2.5px",
+                  } as React.CSSProperties
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <Archive className="w-4 h-4 stroke-[2.2]" />
+                  <span>Archived</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white text-black border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
+                  {String(archivedProjectsCount).padStart(2, "0")}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSelectView("archived")}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs transition-all duration-150 cursor-pointer font-sans font-medium text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-[2px]"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Archive className="w-4 h-4 stroke-[2]" />
+                  <span>Archived</span>
+                </div>
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white dark:bg-[#252528] text-black dark:text-white border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
+                  {String(archivedProjectsCount).padStart(2, "0")}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* 4. PROJECTS SECTION */}
+        {/* PROJECTS SECTION */}
         <div>
-          <div className="flex items-center justify-between px-2 py-1 mb-1.5">
-            <span className="font-brand-sans text-xs font-bold uppercase tracking-wider text-black dark:text-white">
-              PROJECTS
-            </span>
+         
+          <div className="flex items-center gap-2 mb-2.5 px-0.5">
             <button
               type="button"
-              onClick={onOpenNewProjectModal}
-              className="p-1 border border-black bg-white dark:bg-[#1f2023] hover:bg-[#E9FFA3] text-black dark:text-white hover:text-black shadow-[1px_1px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer"
-              title="Create New Project"
+              onClick={() => onSelectView("project")}
+              className={cn(
+                "font-mono text-xs font-bold uppercase tracking-wider shrink-0 transition-colors cursor-pointer",
+                currentView === "project"
+                  ? "text-black bg-[#E9FFA3] px-1.5 py-0.5 border border-black shadow-[1px_1px_0px_#000] rounded-[2px]"
+                  : "text-black dark:text-white hover:underline",
+              )}
+              title="View Projects"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              PROJECTS
             </button>
+            <div className="flex-1 border-b-2 border-dashed border-black/40 dark:border-white/40 h-0" />
+            {activeWorkspace?.role !== "member" && onOpenNewProjectModal && (
+              <button
+                type="button"
+                onClick={onOpenNewProjectModal}
+                className="sb-rough w-6 h-6 flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95 shrink-0"
+                style={
+                  {
+                    "--fill": "#ffffff",
+                    "--sx": "2px",
+                    "--sy": "2px",
+                  } as React.CSSProperties
+                }
+                title="Create New Project"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.8] text-black" />
+              </button>
+            )}
           </div>
 
           {/* Project items */}
           <div className="space-y-1">
             {projects.map((project) => {
               const isSelected = currentView === `project:${project.id}`;
-              return (
+
+              return isSelected ? (
                 <button
                   key={project.id}
                   type="button"
                   onClick={() => onSelectView(`project:${project.id}`)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-1.5 text-xs transition-all cursor-pointer font-brand-sans rounded-none",
-                    isSelected
-                      ? "bg-[#E9FFA3] text-black border-2 border-black font-semibold shadow-[2px_2px_0px_#000000]"
-                      : "bg-transparent text-black/85 dark:text-white/85 border-2 border-transparent hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/20",
-                  )}
+                  className="sb-rough sb-rough-lime w-full flex items-center justify-between px-3 py-2 text-xs cursor-pointer font-sans font-bold text-black mb-1"
+                  style={
+                    {
+                      "--sx": "2.5px",
+                      "--sy": "2.5px",
+                    } as React.CSSProperties
+                  }
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <FolderKanban className="w-3.5 h-3.5 shrink-0 stroke-[2]" />
-                    <span className="truncate">{project.name}</span>
+                  <div className="flex items-center gap-2.5 truncate">
+                    <Folder className="w-4 h-4 stroke-[2.2] shrink-0" />
+                    <span className="truncate font-mono lowercase">
+                      {project.name.toLowerCase()}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-roboto-mono font-semibold px-1.5 py-0.2 bg-white/70 dark:bg-black/40 border border-black/20 text-black dark:text-white">
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white text-black border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
+                    {project.count}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => onSelectView(`project:${project.id}`)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs transition-all rounded-[2px] bg-transparent cursor-pointer text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <Folder className="w-4 h-4 stroke-[2] shrink-0" />
+                    <span className="truncate font-mono lowercase text-xs">
+                      {project.name.toLowerCase()}
+                    </span>
+                  </div>
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white dark:bg-[#252528] text-black dark:text-white border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
                     {project.count}
                   </span>
                 </button>
@@ -288,31 +487,65 @@ export function WorkspaceSidebar({
         </div>
       </div>
 
-      {/* 4. BOTTOM ACTION & USER PROFILE */}
-      <div className="p-3 border-t-2 border-black/15 dark:border-white/15 space-y-2.5 shrink-0">
-        {/* Primary Action Button: New File */}
+      {/* HAND-DRAWN DIVIDER + NEW FILEE + USER PROFILE */}
+      <div className="px-3.5 pb-4 pt-1 space-y-3 shrink-0">
+       
+        <div className="w-full px-0.5 py-1">
+          <svg
+            width="100%"
+            height="4"
+            viewBox="0 0 260 4"
+            fill="none"
+            preserveAspectRatio="none"
+            className="text-black dark:text-white"
+            aria-hidden="true"
+          >
+            <path
+              d="M2 2 C 60 1.2, 120 2.8, 180 1.8 C 210 2.2, 240 1.6, 258 2"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+
         <button
           type="button"
           onClick={onOpenNewFileModal}
-          className="w-full h-10 flex items-center justify-center gap-2 rounded-lg border-2 border-black bg-[#E9FFA3] font-brand-sans font-bold text-xs uppercase tracking-wide text-black shadow-[3px_4px_0px_#000000] hover:shadow-[4px_5px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+          className="sb-rough sb-rough-lime w-full h-12 flex items-center justify-center gap-2.5 font-mono font-bold text-xs uppercase tracking-wider text-black cursor-pointer transition-transform hover:-translate-y-0.5"
+          style={
+            {
+              "--sx": "3px",
+              "--sy": "3px",
+            } as React.CSSProperties
+          }
         >
-          <Send className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>New File</span>
+          <Send className="w-4 h-4 stroke-[2.6]" />
+          <span>NEW FILE</span>
         </button>
 
-        {/* USER PROFILE & SIGN OUT */}
+        {/* USER PROFILE CARD */}
         {user && (
-          <div className="flex items-center justify-between p-2.5 bg-white dark:bg-[#1c1d20] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000000]">
+          <div
+            className="sb-rough flex items-center justify-between p-2.5 text-black cursor-default"
+            style={
+              {
+                "--fill": "#ffffff",
+                "--sx": "2.5px",
+                "--sy": "2.5px",
+              } as React.CSSProperties
+            }
+          >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-[#E9FFA3] font-brand-display flex items-center justify-center text-xs font-bold shrink-0">
-                {(user.name || user.email || "U")[0].toUpperCase()}
+              <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-[#E9FFA3] font-mono flex items-center justify-center text-xs font-bold shrink-0">
+                {(user.name || user.email || "S")[0].toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-brand-sans font-bold text-black dark:text-white truncate">
-                  {user.name || "User"}
+                <div className="text-xs font-sans font-bold text-black truncate">
+                  {user.name || "Sarthak Gupta"}
                 </div>
-                <div className="text-[10px] font-roboto-mono text-[#636363] dark:text-white/60 truncate">
-                  {user.email}
+                <div className="text-[10px] font-sans text-[#636363] truncate">
+                  {user.email || "guptasarthak229@gmail.com"}
                 </div>
               </div>
             </div>
@@ -320,9 +553,9 @@ export function WorkspaceSidebar({
               type="button"
               onClick={signOut}
               title="Sign Out"
-              className="p-1 border border-black/40 hover:border-black hover:bg-red-100 hover:text-red-700 text-black dark:text-white transition-colors cursor-pointer shrink-0"
+              className="w-7 h-7 border-2 border-black bg-white hover:bg-black hover:text-[#E9FFA3] text-black flex items-center justify-center shadow-[1px_1px_0px_#000000] rounded-[2px] transition-all cursor-pointer shrink-0 ml-2"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>
           </div>
         )}

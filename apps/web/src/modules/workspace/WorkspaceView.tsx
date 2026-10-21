@@ -3,24 +3,24 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   HelpCircle,
-  FolderKanban,
-  FileCode,
-  Users,
-  Clock,
   ArrowLeft,
+  Folder,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { WorkspaceHeader } from "./WorkspaceHeader";
 import { CreateBlankCard } from "./CreateBlankCard";
 import { FilesTable } from "./FilesTable";
 import { ProjectsTable } from "./ProjectsTable";
+import { RoughBox } from "./RoughBox";
 import { NewFileModal } from "./NewFileModal";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { InviteModal } from "./InviteModal";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
+import { DeleteWorkspaceModal } from "./DeleteWorkspaceModal";
 import { useAuth } from "@/modules/auth/AuthGuard";
-import { cn } from "@/lib/utils";
 import {
   WorkspaceFile,
   WorkspaceProject,
@@ -33,17 +33,99 @@ import {
   ProjectMemberAssignment,
 } from "./types";
 import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { workspaceQueries } from "@/features/workspaces/queries/workspace.options";
 import { projectQueries } from "@/features/projects/queries/project.options";
 import {
   useUpdateProject,
   useArchiveProject,
 } from "@/features/projects/queries/project.mutations";
+import {
+  toSlug,
+  findWorkspaceBySlugOrId,
+  findProjectBySlugOrId,
+  getSavedWorkspaceId,
+  saveActiveWorkspace,
+} from "./workspace-routing";
+
+const INITIAL_DEMO_FILES: WorkspaceFile[] = [
+  {
+    id: "file-roadmap",
+    name: "Product Roadmap",
+    type: "markdown",
+    projectId: "demo",
+    description: "Initial roadmap and milestones",
+    createdAt: "18/10/2026",
+    createdTimestamp: 1729209600000,
+    editedAt: "18/10/2026",
+    editedTimestamp: 1729209600000,
+    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
+  },
+  {
+    id: "file-architecture",
+    name: "System Architecture",
+    type: "uml",
+    projectId: "demo",
+    description: "High level architecture",
+    createdAt: "17/10/2026",
+    createdTimestamp: 1729123200000,
+    editedAt: "17/10/2026",
+    editedTimestamp: 1729123200000,
+    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
+  },
+  {
+    id: "file-research",
+    name: "Research Notes",
+    type: "markdown",
+    projectId: "demo",
+    description: "User research and insights",
+    createdAt: "15/10/2026",
+    createdTimestamp: 1728950400000,
+    editedAt: "16/10/2026",
+    editedTimestamp: 1729036800000,
+    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
+  },
+  {
+    id: "file-design-system",
+    name: "Design System",
+    type: "uml",
+    projectId: "demo",
+    description: "UI components and guidelines",
+    createdAt: "14/10/2026",
+    createdTimestamp: 1728864000000,
+    editedAt: "14/10/2026",
+    editedTimestamp: 1728864000000,
+    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
+  },
+];
+
+const isProjectFile = (
+  file: WorkspaceFile,
+  targetProjectId: string,
+  projectName?: string,
+) => {
+  return (
+    file.projectId === targetProjectId ||
+    file.projectId === "demo" ||
+    (file.projectId === "patra" && projectName?.toLowerCase() === "patra")
+  );
+};
 
 export function WorkspaceView() {
   const { user } = useAuth();
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>("");
-  const [files, setFiles] = useState<WorkspaceFile[]>([]);
+  const params = useParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const slug = (params?.slug as string[] | undefined) || [];
+  const workspaceSlugParam = slug[0];
+  const sectionParam = slug[1]; // "project" | "archived"
+  const projectSlugParam = slug[2]; // e.g. "asdfg"
+
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
+    return getSavedWorkspaceId() || "";
+  });
+  const [files, setFiles] = useState<WorkspaceFile[]>(INITIAL_DEMO_FILES);
   const [currentView, setCurrentView] = useState<string>("dashboard");
   const [currentTab, setCurrentTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,8 +138,11 @@ export function WorkspaceView() {
     useState(false);
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] =
     useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] =
+    useState<WorkspaceItem | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isProjectHeaderMenuOpen, setIsProjectHeaderMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Live Workspaces Query
@@ -75,14 +160,28 @@ export function WorkspaceView() {
     }));
   }, [workspacesData]);
 
+  // Robust active workspace resolution: URL slug > active state > localStorage > default > first
   const activeWorkspace = useMemo(() => {
     if (!workspaces.length) return null;
-    return (
-      workspaces.find((w) => w.id === activeWorkspaceId) ||
-      workspaces.find((w) => w.isDefault) ||
-      workspaces[0]
-    );
-  }, [workspaces, activeWorkspaceId]);
+
+    if (workspaceSlugParam) {
+      const matched = findWorkspaceBySlugOrId(workspaces, workspaceSlugParam);
+      if (matched) return matched;
+    }
+
+    if (activeWorkspaceId) {
+      const matched = workspaces.find((w) => w.id === activeWorkspaceId);
+      if (matched) return matched;
+    }
+
+    const savedId = getSavedWorkspaceId();
+    if (savedId) {
+      const matched = workspaces.find((w) => w.id === savedId);
+      if (matched) return matched;
+    }
+
+    return workspaces.find((w) => w.isDefault) || workspaces[0];
+  }, [workspaces, workspaceSlugParam, activeWorkspaceId]);
 
   const effectiveWorkspaceId = activeWorkspace?.id || "";
 
@@ -91,39 +190,62 @@ export function WorkspaceView() {
     projectQueries.listByWorkspace(effectiveWorkspaceId),
   );
 
-  // Live Workspace Members Query
-  const { data: workspaceMembers = [] } = useQuery(
-    workspaceQueries.members(effectiveWorkspaceId),
-  );
-
-  const projects: WorkspaceProject[] = useMemo(() => {
+  const allProjects: WorkspaceProject[] = useMemo(() => {
     return projectsData.map((p) => {
-      const pFiles = files.filter((f) => f.projectId === p.id);
+      const pFiles = files.filter((f) => isProjectFile(f, p.id, p.name));
+      const dateObj = new Date(p.updatedAt);
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const year = dateObj.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
       return {
         id: p.id,
         name: p.name,
         count: pFiles.length,
-        access: p.access === "editor" ? "workspace" : "private",
-        createdAt: new Date(p.createdAt).toLocaleDateString(),
-        updatedAt: new Date(p.updatedAt).toLocaleDateString(),
-        updatedTimestamp: new Date(p.updatedAt).getTime(),
+        access: p.access,
+        archivedAt: p.archivedAt,
+        createdAt: formattedDate,
+        updatedAt: formattedDate,
+        updatedTimestamp: dateObj.getTime(),
       };
     });
   }, [projectsData, files]);
 
+  // Active (unarchived) projects only
+  const activeProjects = useMemo(() => {
+    return allProjects.filter((p) => !p.archivedAt);
+  }, [allProjects]);
+
+  // Archived projects only
+  const archivedProjects = useMemo(() => {
+    return allProjects.filter((p) => Boolean(p.archivedAt));
+  }, [allProjects]);
+
   const updateProjectMutation = useUpdateProject(effectiveWorkspaceId);
   const archiveProjectMutation = useArchiveProject(effectiveWorkspaceId);
 
-  // Sync activeWorkspaceId with available workspaces
+  // Sync active workspace ID and maintain URL when on /workspace or /dashboard
   useEffect(() => {
-    if (workspaces.length > 0) {
-      const exists = workspaces.some((w) => w.id === activeWorkspaceId);
-      if (!exists) {
-        const def = workspaces.find((w) => w.isDefault);
-        setActiveWorkspaceId(def ? def.id : workspaces[0].id);
-      }
+    if (!activeWorkspace) return;
+    if (activeWorkspace.id !== activeWorkspaceId) {
+      setActiveWorkspaceId(activeWorkspace.id);
     }
-  }, [workspaces, activeWorkspaceId]);
+    saveActiveWorkspace(activeWorkspace);
+
+    // If on /workspace or /dashboard without a workspace in the URL, redirect to /workspace/:workspacename
+    if (
+      !workspaceSlugParam &&
+      (pathname?.startsWith("/workspace") || pathname?.startsWith("/dashboard"))
+    ) {
+      router.replace(`/workspace/${toSlug(activeWorkspace.name)}`);
+    }
+  }, [
+    activeWorkspace,
+    activeWorkspaceId,
+    workspaceSlugParam,
+    pathname,
+    router,
+  ]);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -131,6 +253,28 @@ export function WorkspaceView() {
       setToastMessage(null);
     }, 2800);
   }, []);
+
+  const handleWorkspaceDeleted = useCallback(
+    (deletedId: string) => {
+      showToast(
+        workspaceToDelete
+          ? `Workspace "${workspaceToDelete.name}" deleted.`
+          : "Workspace deleted.",
+      );
+
+      // If the deleted workspace was currently active, switch back to the default workspace
+      if (deletedId === activeWorkspaceId) {
+        const fallback = workspaces.find((w) => w.isDefault) || workspaces[0];
+        if (fallback) {
+          setActiveWorkspaceId(fallback.id);
+          saveActiveWorkspace(fallback);
+          router.replace(`/workspace/${toSlug(fallback.name)}`);
+        }
+      }
+      setWorkspaceToDelete(null);
+    },
+    [activeWorkspaceId, workspaces, workspaceToDelete, showToast, router],
+  );
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -161,19 +305,51 @@ export function WorkspaceView() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Synchronize view state from route segments
+  useEffect(() => {
+    if (sectionParam === "archived") {
+      setCurrentView("archived");
+      return;
+    }
+
+    if (sectionParam === "project") {
+      if (projectSlugParam) {
+        const matched = findProjectBySlugOrId(allProjects, projectSlugParam);
+        if (matched) {
+          setCurrentView(`project:${matched.id}`);
+        }
+      } else {
+        setCurrentView("project");
+      }
+      return;
+    }
+
+    if (!sectionParam) {
+      setCurrentView("dashboard");
+    }
+  }, [sectionParam, projectSlugParam, allProjects]);
+
+  const isOwnerOrAdmin =
+    activeWorkspace?.role === "owner" || activeWorkspace?.role === "admin";
+
   // Active chosen project
   const selectedProject = useMemo(() => {
     if (currentView.startsWith("project:")) {
       const pId = currentView.replace("project:", "");
-      return projects.find((p) => p.id === pId) || null;
+      return allProjects.find((p) => p.id === pId) || null;
+    }
+    if (
+      sectionParam === "project" &&
+      projectSlugParam &&
+      allProjects.length > 0
+    ) {
+      return findProjectBySlugOrId(allProjects, projectSlugParam);
     }
     return null;
-  }, [currentView, projects]);
+  }, [currentView, sectionParam, projectSlugParam, allProjects]);
 
-  // Live Project Editors Query
-  const { data: projectEditors = [] } = useQuery(
-    projectQueries.editors(selectedProject?.id || ""),
-  );
+  const isArchivedView =
+    currentView === "archived" || sectionParam === "archived";
 
   // Filter and sort files
   const filteredAndSortedFiles = useMemo(() => {
@@ -182,7 +358,7 @@ export function WorkspaceView() {
         // Project partition filter
         if (currentView.startsWith("project:")) {
           const projectId = currentView.replace("project:", "");
-          return file.projectId === projectId;
+          return isProjectFile(file, projectId, selectedProject?.name);
         }
 
         // Top Filter Tabs
@@ -219,22 +395,6 @@ export function WorkspaceView() {
       });
   }, [files, currentView, currentTab, searchQuery, sortField, sortDirection]);
 
-  // Metrics for overview cards
-  const stats = useMemo(() => {
-    const totalCanvases = files.filter((f) => !f.isArchived).length;
-    const totalProjects = projects.length;
-    const recentEdits = files.filter(
-      (f) => Date.now() - f.editedTimestamp < 24 * 60 * 60 * 1000,
-    ).length;
-    const totalMembers = workspaceMembers.length;
-    return {
-      totalCanvases,
-      totalProjects,
-      recentEdits,
-      totalMembers,
-    };
-  }, [files, projects, workspaceMembers.length]);
-
   // Handlers
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -244,6 +404,52 @@ export function WorkspaceView() {
       setSortDirection("desc");
     }
   };
+
+  const handleSelectWorkspace = useCallback(
+    (wsId: string) => {
+      const target = workspaces.find((w) => w.id === wsId);
+      if (!target) return;
+      setActiveWorkspaceId(wsId);
+      saveActiveWorkspace(target);
+      setCurrentView("dashboard");
+      router.push(`/workspace/${toSlug(target.name)}`);
+    },
+    [workspaces, router],
+  );
+
+  const handleSelectView = useCallback(
+    (view: string) => {
+      setCurrentView(view);
+      if (!activeWorkspace) return;
+      const wsSlug = toSlug(activeWorkspace.name);
+
+      if (view === "dashboard") {
+        router.push(`/workspace/${wsSlug}`);
+      } else if (view === "project") {
+        router.push(`/workspace/${wsSlug}/project`);
+      } else if (view === "archived") {
+        router.push(`/workspace/${wsSlug}/archived`);
+      } else if (view.startsWith("project:")) {
+        const pId = view.replace("project:", "");
+        const target = allProjects.find((p) => p.id === pId);
+        const pSlug = target ? toSlug(target.name) : pId;
+        router.push(`/workspace/${wsSlug}/project/${pSlug}`);
+      }
+    },
+    [activeWorkspace, allProjects, router],
+  );
+
+  const handleSelectProject = useCallback(
+    (projectId: string) => {
+      setCurrentView(`project:${projectId}`);
+      if (!activeWorkspace) return;
+      const wsSlug = toSlug(activeWorkspace.name);
+      const target = allProjects.find((p) => p.id === projectId);
+      const pSlug = target ? toSlug(target.name) : projectId;
+      router.push(`/workspace/${wsSlug}/project/${pSlug}`);
+    },
+    [activeWorkspace, allProjects, router],
+  );
 
   const handleCreateFile = ({
     name,
@@ -258,7 +464,7 @@ export function WorkspaceView() {
       projectId ||
       (currentView.startsWith("project:")
         ? currentView.replace("project:", "")
-        : projects[0]?.id || "proj-arch");
+        : activeProjects[0]?.id || "");
 
     const newFile: WorkspaceFile = {
       id: `file-${Date.now()}`,
@@ -327,12 +533,13 @@ export function WorkspaceView() {
     showToast(`Workspace "${newWorkspace.name}" created`);
   };
 
-  // Filtered projects for dashboard directory
+  // Filtered projects for dashboard or archived directory
   const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
+    const targetList = isArchivedView ? archivedProjects : activeProjects;
+    if (!searchQuery.trim()) return targetList;
     const q = searchQuery.toLowerCase();
-    return projects.filter((p) => p.name.toLowerCase().includes(q));
-  }, [projects, searchQuery]);
+    return targetList.filter((p) => p.name.toLowerCase().includes(q));
+  }, [isArchivedView, archivedProjects, activeProjects, searchQuery]);
 
   const handleRenameProject = async (projectId: string, newName: string) => {
     try {
@@ -349,7 +556,7 @@ export function WorkspaceView() {
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    const proj = projects.find((p) => p.id === projectId);
+    const proj = allProjects.find((p) => p.id === projectId);
     try {
       await archiveProjectMutation.mutateAsync(projectId);
       setFiles((prev) => prev.filter((f) => f.projectId !== projectId));
@@ -366,19 +573,146 @@ export function WorkspaceView() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#FFFEFC] dark:bg-[#0c0d0e] text-black dark:text-white transition-colors duration-200 font-brand-sans">
+      {/* SVG filter for organic wobbly paper buttons */}
+      <svg
+        width="0"
+        height="0"
+        className="absolute pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="pbtn-r1" x="-8%" y="-12%" width="116%" height="124%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.045 0.07"
+              numOctaves="3"
+              seed="3"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="4.5"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+          <filter id="pbtn-r2" x="-8%" y="-12%" width="116%" height="124%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.05 0.08"
+              numOctaves="3"
+              seed="11"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="5"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+      {/* Scoped styles for paper button prototype */}
+      <style>{`
+        .paper-btn {
+          position: relative;
+          isolation: isolate;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          --fill: #faf7f2;
+          --ink: #111111;
+          color: var(--ink);
+          cursor: pointer;
+          border: 0;
+          background: transparent;
+          transition: transform 0.08s ease, opacity 0.15s ease;
+        }
+        .paper-btn::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: var(--fill);
+          border: 2px solid var(--ink);
+          border-radius: 2px;
+          filter: url(#pbtn-r1);
+          pointer-events: none;
+        }
+        .paper-btn:hover {
+          opacity: 0.94;
+        }
+        .paper-btn:active {
+          transform: translate(1px, 1.5px);
+        }
+        .paper-btn--lime {
+          --fill: #e9ffa3;
+        }
+        .paper-btn--paper {
+          --fill: #faf7f2;
+        }
+        .paper-btn--help {
+          --fill: #ffffff;
+        }
+        .paper-btn--help:hover {
+          --fill: #e9ffa3;
+        }
+        .paper-btn--shadow {
+          --sx: 3.5px;
+          --sy: 4.5px;
+        }
+        .paper-btn--shadow::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -2;
+          background: var(--ink);
+          border-radius: 2px;
+          transform: translate(var(--sx), var(--sy));
+          filter: url(#pbtn-r2);
+          pointer-events: none;
+        }
+        .paper-btn--shadow:active {
+          transform: translate(2px, 2.5px);
+          --sx: 1.5px;
+          --sy: 2px;
+        }
+        .dark .paper-btn--paper {
+          --fill: #1e1e22;
+          --ink: #ffffff;
+        }
+        .dark .paper-btn--lime {
+          --ink: #111111;
+        }
+        .dark .paper-btn--help {
+          --fill: #18191c;
+          --ink: #ffffff;
+        }
+        .dark .paper-btn--help:hover {
+          --fill: #e9ffa3;
+          --ink: #111111;
+        }
+      `}</style>
+
       {/* Left Sidebar */}
       <WorkspaceSidebar
         currentView={currentView}
-        onSelectView={(view) => {
-          setCurrentView(view);
-        }}
-        projects={projects}
-        onOpenNewProjectModal={() => setIsCreateProjectModalOpen(true)}
+        onSelectView={handleSelectView}
+        projects={activeProjects}
+        archivedProjectsCount={archivedProjects.length}
+        onOpenNewProjectModal={
+          isOwnerOrAdmin ? () => setIsCreateProjectModalOpen(true) : undefined
+        }
         onOpenNewFileModal={() => setIsNewFileModalOpen(true)}
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
-        onSelectWorkspace={(wsId) => setActiveWorkspaceId(wsId)}
+        onSelectWorkspace={handleSelectWorkspace}
         onOpenNewWorkspaceModal={() => setIsCreateWorkspaceModalOpen(true)}
+        onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
       />
 
       {/* Main Content Area */}
@@ -392,179 +726,168 @@ export function WorkspaceView() {
           onOpenInviteModal={() => setIsInviteModalOpen(true)}
         />
 
-        {/* Content Body with MailerBot Grid Paper */}
+        {/* Content Body with Technical Grid Paper */}
         <main className="grid-paper relative min-h-0 flex-1 overflow-y-auto p-6 md:p-8 animate-in fade-in-0 duration-200 ease-out">
           <div className="max-w-6xl mx-auto space-y-6 pb-20">
-            {/* Project Header Banner when a project is chosen */}
+            {/* Project Header Banner when a project is chosen (§12 & §13) */}
             {selectedProject && (
-              <div className="bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[5px_6px_0px_0px_rgba(0,0,0,0.14)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000000]">
-                    <FolderKanban className="w-5 h-5 stroke-[2.2]" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <h1 className="font-brand-display text-base sm:text-lg font-bold text-black dark:text-white">
-                        {selectedProject.name}
-                      </h1>
-                      <span className="px-2 py-0.5 text-[10px] font-roboto-mono font-bold uppercase tracking-wider bg-[#D3B8FC] text-black border border-black">
-                        {selectedProject.access === "private"
-                          ? "Restricted Access"
-                          : "Workspace Access"}
-                      </span>
-                    </div>
-                    <p className="font-roboto-mono text-xs text-[#636363] dark:text-white/60 mt-0.5">
-                      {filteredAndSortedFiles.length}{" "}
-                      {filteredAndSortedFiles.length === 1
-                        ? "canvas"
-                        : "canvases"}{" "}
-                      •{" "}
-                      {projectEditors.length > 0
-                        ? `${projectEditors.length} ${projectEditors.length === 1 ? "member" : "members"}`
-                        : "Workspace Access"}{" "}
-                      • Full Collaboration
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentView("dashboard")}
-                  className="self-start sm:self-auto px-3 py-1.5 bg-white dark:bg-[#202227] hover:bg-[#E9FFA3] dark:hover:bg-[#E9FFA3] text-black dark:text-white hover:text-black dark:hover:text-black border-2 border-black font-brand-sans font-bold text-xs shadow-[2px_2px_0px_#000000] flex items-center gap-1.5 transition-all cursor-pointer"
+              <div className="relative pt-2 pb-1">
+                <RoughBox
+                  seed={9}
+                  fill="#ffffff"
+                  amp={1.25}
+                  rings="none"
+                  tape="none"
+                  shadow={false}
+                  className="w-full"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Back to Projects</span>
-                </button>
+                  <div className="py-5 px-6 mr-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      {/* Big Lime Folder Box */}
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[4px] paper-texture-wash">
+                        <Folder className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2]" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h1 className="font-brand-sans font-bold text-2xl sm:text-3xl text-black tracking-tight truncate">
+                          {selectedProject.name}
+                        </h1>
+                        {selectedProject.description && (
+                          <p className="font-brand-sans text-xs sm:text-sm text-[#636363] mt-0.5 truncate">
+                            {selectedProject.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
+                      {/* 3-dots actions button (Owner & Admin only) */}
+                      {isOwnerOrAdmin && (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-label="Project actions"
+                            onClick={() =>
+                              setIsProjectHeaderMenuOpen(
+                                !isProjectHeaderMenuOpen,
+                              )
+                            }
+                            className="paper-btn paper-btn--paper w-9 h-9 text-black flex items-center justify-center cursor-pointer select-none"
+                          >
+                            <MoreHorizontal className="w-4 h-4 stroke-[2.2]" />
+                          </button>
+
+                          {isProjectHeaderMenuOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() =>
+                                  setIsProjectHeaderMenuOpen(false)
+                                }
+                              />
+                              <div
+                                className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black p-1.5 text-xs animate-in fade-in-50 duration-150 rounded-[2px]"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsProjectHeaderMenuOpen(false);
+                                    handleDeleteProject(selectedProject.id);
+                                    handleSelectView("dashboard");
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
+                                  <span>Delete Project</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Back to Projects Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectView("dashboard")}
+                        className="paper-btn paper-btn--lime px-4 py-2 font-brand-sans font-bold text-xs flex items-center gap-2 cursor-pointer select-none"
+                      >
+                        <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                        <span>Back to Projects</span>
+                      </button>
+                    </div>
+                  </div>
+                </RoughBox>
               </div>
             )}
 
-            {/* Quick Overview Metric Tiles (MailerBot Dashboard Recipe) */}
-            <div
-              className={cn(
-                "grid gap-3 lg:gap-4",
-                selectedProject
-                  ? "grid-cols-1 sm:grid-cols-3"
-                  : "grid-cols-2 lg:grid-cols-4",
-              )}
-            >
-              <div className="bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[4px_5px_0px_0px_rgba(0,0,0,0.14)] p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#636363] dark:text-white/70">
-                  <span>
-                    {selectedProject ? "Project Canvases" : "Total Canvases"}
-                  </span>
-                  <FileCode className="w-4 h-4 text-black dark:text-white" />
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-bold font-brand-display text-black dark:text-white">
-                    {selectedProject
-                      ? files.filter(
-                          (f) =>
-                            f.projectId === selectedProject.id && !f.isArchived,
-                        ).length
-                      : stats.totalCanvases}
-                  </div>
-                  <p className="text-[11px] font-roboto-mono text-[#636363] dark:text-white/50 mt-0.5">
-                    {selectedProject
-                      ? "In this project"
-                      : "Across all projects"}
-                  </p>
-                </div>
-              </div>
+            {/* "Create a Project" Hero Card on Dashboard - Owner & Admin only */}
+            {!selectedProject && !isArchivedView && isOwnerOrAdmin && (
+              <CreateBlankCard
+                title="Create a Project"
+                subtitle="Organize canvases, specs and your work"
+                onClick={() => setIsCreateProjectModalOpen(true)}
+              />
+            )}
 
-              {!selectedProject && (
-                <div className="bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[4px_5px_0px_0px_rgba(0,0,0,0.14)] p-4 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#636363] dark:text-white/70">
-                    <span>Projects</span>
-                    <FolderKanban className="w-4 h-4 text-black dark:text-white" />
-                  </div>
-                  <div className="mt-2">
-                    <div className="text-2xl font-bold font-brand-display text-black dark:text-white">
-                      {stats.totalProjects}
-                    </div>
-                    <p className="text-[11px] font-roboto-mono text-[#636363] dark:text-white/50 mt-0.5">
-                      Organized groups
-                    </p>
-                  </div>
-                </div>
-              )}
+            {/* "Create a Blank File" Hero Card on Project Page (§13.2) */}
+            {selectedProject && (
+              <CreateBlankCard
+                title="Create a Blank File"
+                subtitle="Infinite drafting canvas & specs"
+                tag="BLANK CANVAS"
+                punchedHoles={true}
+                onClick={() => setIsNewFileModalOpen(true)}
+              />
+            )}
 
-              <div className="bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[4px_5px_0px_0px_rgba(0,0,0,0.14)] p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#636363] dark:text-white/70">
-                  <span>Recent Edits</span>
-                  <Clock className="w-4 h-4 text-black dark:text-white" />
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-bold font-brand-display text-black dark:text-white">
-                    {selectedProject
-                      ? files.filter(
-                          (f) =>
-                            f.projectId === selectedProject.id &&
-                            Date.now() - f.editedTimestamp <
-                              24 * 60 * 60 * 1000,
-                        ).length
-                      : stats.recentEdits}
-                  </div>
-                  <p className="text-[11px] font-roboto-mono text-[#636363] dark:text-white/50 mt-0.5">
-                    Last 24 hours
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[4px_5px_0px_0px_rgba(0,0,0,0.14)] p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#636363] dark:text-white/70">
-                  <span>Team Sync</span>
-                  <Users className="w-4 h-4 text-black dark:text-white" />
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-bold font-brand-display text-black dark:text-white">
-                    {selectedProject
-                      ? projectEditors.length
-                      : stats.totalMembers}
-                  </div>
-                  <p className="text-[11px] font-roboto-mono text-[#636363] dark:text-white/50 mt-0.5">
-                    Active collaborators
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* "Create a Blank File" Card */}
-            <CreateBlankCard onClick={() => setIsNewFileModalOpen(true)} />
-
-            {/* Architectural Section Divider matching MailerBot Dash-drift */}
+            {/* Section Header: [01] PROJECT FILES • 4 ITEMS --- sparks */}
             <div className="py-2">
-              <div
-                aria-hidden="true"
-                className="w-full text-black/30 dark:text-white/30"
-              >
-                <svg aria-hidden="true" className="h-[2px] w-full">
-                  <line
-                    x1="0"
-                    y1="1"
-                    x2="100%"
-                    y2="1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="dash-drift"
-                  />
-                </svg>
-              </div>
-              <div className="flex items-center justify-between pt-3">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-[#E9FFA3] text-black border border-black font-roboto-mono text-xs font-bold">
-                    02
-                  </span>
-                  <span className="font-brand-display font-bold text-xs uppercase tracking-widest text-black dark:text-white">
+              <div className="section-head flex items-center gap-3">
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="px-1.5 py-0.5 bg-[#E9FFA3] text-black border border-black font-mono text-xs font-bold rounded-[2px]">
                     {selectedProject
-                      ? "CANVAS REPOSITORY • ACTIVE DIRECTORY"
-                      : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
+                      ? String(filteredAndSortedFiles.length).padStart(2, "0")
+                      : String(filteredProjects.length).padStart(2, "0")}
+                  </span>
+                  <span className="font-mono font-bold text-xs uppercase tracking-[0.5px] text-black dark:text-white">
+                    {selectedProject
+                      ? `PROJECT FILES • ${filteredAndSortedFiles.length} ${filteredAndSortedFiles.length === 1 ? "ITEM" : "ITEMS"}`
+                      : isArchivedView
+                        ? "ARCHIVED DIRECTORY • SOFT-DELETED PROJECTS"
+                        : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
                   </span>
                 </div>
-                <span className="font-roboto-mono text-xs text-[#636363] dark:text-white/60">
-                  {selectedProject
-                    ? `${String(filteredAndSortedFiles.length).padStart(2, "0")} / ${String(files.filter((f) => f.projectId === selectedProject.id).length).padStart(2, "0")} ITEMS`
-                    : `${String(filteredProjects.length).padStart(2, "0")} / ${String(projects.length).padStart(2, "0")} PROJECTS`}
-                </span>
+
+                <div className="rule flex-1 border-t-[1.5px] border-dashed border-[#DAD1C5] dark:border-white/20" />
+
+                {!selectedProject && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono font-bold text-xs text-black/80 dark:text-white/80 uppercase tracking-[0.35px]">
+                      {isArchivedView
+                        ? `${String(filteredProjects.length).padStart(2, "0")} / ${String(archivedProjects.length).padStart(2, "0")} ARCHIVED`
+                        : `${String(filteredProjects.length).padStart(2, "0")} / ${String(activeProjects.length).padStart(2, "0")} PROJECTS`}
+                    </span>
+                  </div>
+                )}
+
+                {/* 3 Doodle Spark Rays on the Right (§13.3) */}
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="text-black dark:text-white shrink-0"
+                  aria-hidden="true"
+                >
+                  <line x1="4" y1="4" x2="16" y2="1" />
+                  <line x1="2" y1="10" x2="18" y2="10" />
+                  <line x1="4" y1="16" x2="16" y2="19" />
+                </svg>
               </div>
             </div>
 
@@ -579,17 +902,27 @@ export function WorkspaceView() {
                 onDeleteFile={handleDeleteFile}
                 onDuplicateFile={handleDuplicateFile}
                 onRenameFile={handleRenameFile}
+                onOpenNewFileModal={() => setIsNewFileModalOpen(true)}
               />
             ) : (
               <ProjectsTable
                 projects={filteredProjects}
                 files={files}
-                onSelectProject={(projectId) =>
-                  setCurrentView(`project:${projectId}`)
+                isArchived={isArchivedView}
+                currentUserRole={activeWorkspace?.role || "member"}
+                onSelectProject={handleSelectProject}
+                onRenameProject={
+                  isOwnerOrAdmin ? handleRenameProject : undefined
                 }
-                onRenameProject={handleRenameProject}
-                onDeleteProject={handleDeleteProject}
-                onOpenNewProjectModal={() => setIsCreateProjectModalOpen(true)}
+                onDeleteProject={
+                  isOwnerOrAdmin ? handleDeleteProject : undefined
+                }
+                onOpenNewProjectModal={
+                  isOwnerOrAdmin
+                    ? () => setIsCreateProjectModalOpen(true)
+                    : undefined
+                }
+                workspaceId={effectiveWorkspaceId}
               />
             )}
           </div>
@@ -597,22 +930,24 @@ export function WorkspaceView() {
       </div>
 
       {/* Floating Help / Shortcuts Button in bottom-right corner */}
-      <button
-        type="button"
-        aria-label="Keyboard shortcuts and help"
-        onClick={() => setIsShortcutsModalOpen(true)}
-        className="fixed bottom-5 right-5 w-9 h-9 border-2 border-black bg-white dark:bg-[#18191c] hover:bg-[#E9FFA3] dark:hover:bg-[#E9FFA3] text-black dark:text-white dark:hover:text-black shadow-[3px_3px_0px_#000000] flex items-center justify-center transition-all active:translate-x-0.5 active:translate-y-0.5 cursor-pointer z-30"
-        title="Keyboard shortcuts (?)"
-      >
-        <HelpCircle className="w-4 h-4 stroke-[2.2]" />
-      </button>
+      <div className="fixed bottom-5 right-5 z-30">
+        <button
+          type="button"
+          aria-label="Keyboard shortcuts and help"
+          onClick={() => setIsShortcutsModalOpen(true)}
+          className="w-9 h-9 paper-btn paper-btn--help paper-btn--shadow cursor-pointer"
+          title="Keyboard shortcuts (?)"
+        >
+          <HelpCircle className="w-4 h-4 stroke-[2.2]" />
+        </button>
+      </div>
 
       {/* Modals */}
       <NewFileModal
         isOpen={isNewFileModalOpen}
         onClose={() => setIsNewFileModalOpen(false)}
-        projects={projects}
-        defaultProjectId={selectedProject?.id || projects[0]?.id}
+        projects={activeProjects}
+        defaultProjectId={selectedProject?.id || activeProjects[0]?.id}
         onCreateFile={handleCreateFile}
       />
 
@@ -627,6 +962,13 @@ export function WorkspaceView() {
         isOpen={isCreateWorkspaceModalOpen}
         onClose={() => setIsCreateWorkspaceModalOpen(false)}
         onCreateWorkspace={handleCreateWorkspace}
+      />
+
+      <DeleteWorkspaceModal
+        isOpen={Boolean(workspaceToDelete)}
+        onClose={() => setWorkspaceToDelete(null)}
+        workspace={workspaceToDelete}
+        onDeleted={handleWorkspaceDeleted}
       />
 
       <InviteModal

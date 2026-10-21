@@ -3,7 +3,6 @@
 import React, { useRef, useEffect } from "react";
 import { Search, Send } from "lucide-react";
 import { FilterTab } from "./types";
-import { ThemeToggle } from "@/modules/auth/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceHeaderProps {
@@ -46,9 +45,128 @@ export function WorkspaceHeader({
   ];
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 px-6 h-14 border-b-2 border-black dark:border-white/20 bg-[#FFFEFC] dark:bg-[#111213] transition-colors duration-200 font-brand-sans shrink-0">
-      {/* Filter Tabs */}
-      <nav className="flex items-center gap-2" aria-label="Filter files">
+    <header className="flex flex-wrap items-center justify-between gap-3 px-6 h-14 border-b-2 border-black dark:border-white/20 bg-[#FAF7F2] dark:bg-[#141416] grid-paper transition-colors duration-200 font-brand-sans shrink-0 select-none">
+   
+      <svg
+        width="0"
+        height="0"
+        className="absolute pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          <filter id="hdr-r1" x="-6%" y="-12%" width="112%" height="124%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.045 0.07"
+              numOctaves="3"
+              seed="9"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="2.4"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+          <filter id="hdr-r2" x="-6%" y="-12%" width="112%" height="124%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.05 0.08"
+              numOctaves="3"
+              seed="17"
+              result="n"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="n"
+              scale="2.8"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+     
+      <style>{`
+        .hdr-rough {
+          position: relative;
+          isolation: isolate;
+          --fill: #ffffff;
+          --border: #111111;
+          --sx: 0px;
+          --sy: 0px;
+        }
+        .dark .hdr-rough {
+          --fill: #1c1d20;
+          --border: #ffffff;
+        }
+        .hdr-rough::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: var(--fill);
+          border: 2px solid var(--border);
+          border-radius: 3px;
+          filter: url(#hdr-r1);
+        }
+        .hdr-rough.has-shadow {
+          --sx: 3px;
+          --sy: 3px;
+        }
+        .hdr-rough.has-shadow::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -2;
+          background: var(--border);
+          border-radius: 3px;
+          transform: translate(var(--sx), var(--sy));
+          filter: url(#hdr-r2);
+        }
+        .hdr-rough-lime {
+          --fill: #e9ffa3 !important;
+          --border: #111111 !important;
+        }
+        .dark .hdr-rough-lime {
+          --fill: #e9ffa3 !important;
+          --border: #ffffff !important;
+        }
+        .hdr-rough-black {
+          --fill: #000000 !important;
+          --border: #000000 !important;
+        }
+        .dark .hdr-rough-black {
+          --fill: #ffffff !important;
+          --border: #ffffff !important;
+        }
+        .hdr-rough-circle {
+          position: relative;
+          isolation: isolate;
+          --fill: #ffffff;
+          --border: #111111;
+        }
+        .dark .hdr-rough-circle {
+          --fill: #1c1d20;
+          --border: #ffffff;
+        }
+        .hdr-rough-circle::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: var(--fill);
+          border: 2px solid var(--border);
+          border-radius: 9999px;
+          filter: url(#hdr-r1);
+        }
+      `}</style>
+
+   
+      <nav className="flex items-center gap-2.5" aria-label="Filter files">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
           return (
@@ -57,10 +175,10 @@ export function WorkspaceHeader({
               type="button"
               onClick={() => onSelectTab(tab.id)}
               className={cn(
-                "px-3.5 py-1.5 text-xs font-brand-sans transition-all duration-150 cursor-pointer select-none",
+                "hdr-rough h-8 px-4 flex items-center justify-center text-xs font-bold font-sans cursor-pointer select-none transition-transform active:translate-x-0.5 active:translate-y-0.5",
                 isActive
-                  ? "bg-[#E9FFA3] text-black border-2 border-black font-semibold shadow-[2px_2px_0px_#000000]"
-                  : "bg-white dark:bg-[#1c1d20] text-black dark:text-white border-2 border-black/30 dark:border-white/30 hover:border-black hover:bg-black/5 font-medium shadow-[1px_1px_0px_#000000]",
+                  ? "hdr-rough-lime has-shadow text-black"
+                  : "text-black dark:text-white hover:opacity-90",
               )}
             >
               {tab.label}
@@ -69,42 +187,35 @@ export function WorkspaceHeader({
         })}
       </nav>
 
-      {/* Right Controls: Search, Avatars, Invite, Theme Toggle */}
-      <div className="flex items-center gap-3">
-        {/* Search Input */}
-        <div className="relative flex items-center">
-          <Search className="absolute left-3 w-3.5 h-3.5 text-[#636363] dark:text-white/60 pointer-events-none" />
+
+      <div className="flex items-center gap-3.5">
+     
+        <div className="hdr-rough relative flex items-center h-8 w-64 sm:w-80 md:w-[340px] px-3 transition-all">
+          <Search className="w-4 h-4 text-black dark:text-white shrink-0 stroke-[2.2] mr-2.5 pointer-events-none" />
           <input
             ref={searchInputRef}
             type="text"
             placeholder="Search canvases..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-48 sm:w-56 pl-8 pr-10 py-1.5 text-xs bg-white dark:bg-[#1c1d20] text-black dark:text-white border-2 border-black dark:border-white/30 placeholder:text-[#636363] shadow-[2px_2px_0px_#000000] focus:outline-none focus:shadow-[3px_3px_0px_#000000] transition-all font-brand-sans"
+            className="w-full bg-transparent border-none outline-none text-xs font-brand-sans text-black dark:text-white placeholder:text-[#888888] dark:placeholder:text-white/40"
           />
-          <div className="absolute right-2.5 flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 text-[10px] font-roboto-mono bg-[#ECE7E0] dark:bg-black text-black dark:text-white border border-black/40 font-semibold pointer-events-none">
+          <div className="flex items-center ml-1.5 shrink-0">
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#888888] dark:text-white/50 border border-black/25 dark:border-white/30 rounded-[2px] bg-transparent leading-none pointer-events-none">
               /
             </kbd>
           </div>
         </div>
 
-
         {/* Invite Button */}
         <button
           type="button"
           onClick={onOpenInviteModal}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-black text-white hover:bg-[#E9FFA3] hover:text-black border-2 border-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+          className="hdr-rough hdr-rough-black h-8 px-4 flex items-center gap-1.5 text-xs font-bold font-sans text-white dark:text-black cursor-pointer select-none transition-transform active:scale-95"
         >
-          <Send className="w-3 h-3 stroke-[2.2]" />
+          <Send className="w-3.5 h-3.5 text-white dark:text-black stroke-[2.2]" />
           <span>Invite</span>
         </button>
-
-        {/* Theme Toggle Button */}
-        <ThemeToggle
-          variant="circle"
-          className="p-1.5 border-2 border-black bg-white dark:bg-[#1c1d20] shadow-[2px_2px_0px_#000000] hover:bg-[#E9FFA3] dark:hover:bg-[#E9FFA3] text-black dark:text-white dark:hover:text-black transition-colors cursor-pointer"
-        />
       </div>
     </header>
   );
