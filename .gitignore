@@ -7,4 +7,4 @@ dist
 *.log
 .DS_Store
 skills
-trace-workspace_design*
+trace-workspace_design*/fonts

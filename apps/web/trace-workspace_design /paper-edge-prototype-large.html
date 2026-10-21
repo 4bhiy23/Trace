@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--paper:#fffefc;--ink:#111;--shade:#ece7e0}
+body{margin:0;min-height:100vh;background:#faf7f2;background-image:linear-gradient(to right,#ece7e0 1px,transparent 1px),linear-gradient(#ece7e0 1px,transparent 1px);background-size:40px 40px;position:relative;font-family:Inter,system-ui,sans-serif;overflow:auto}
+.sheet{position:relative;margin:80px auto 40px;width:min(620px,calc(100vw - 80px));height:680px;box-sizing:border-box}
+.edge{position:absolute;inset:0;overflow:visible;pointer-events:none;filter:drop-shadow(4px 5px 0 rgba(120,95,50,.16))}
+.edge .fill{fill:var(--paper);stroke:none}
+.edge .l1{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.edge .l2{fill:none;stroke:var(--ink);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+.rings{position:absolute;left:4px;top:24px;bottom:24px;width:42px;background-repeat:repeat-y;background-size:42px 58px;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='58' viewBox='0 0 42 58'%3E%3Cpath d='M0 20 C8 20 13 22.5 13 29 C13 35.5 8 38 0 38' fill='none' stroke='%23111' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='29' r='10' fill='%23D9D5CD' stroke='%23111' stroke-width='2.3'/%3E%3Cpath d='M17 33.5 A6.8 6.8 0 0 0 27 35.5' fill='none' stroke='%23fff' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")}
+.inner{position:absolute;left:66px;right:22px;top:34px;bottom:42px;border:1px solid rgba(0,0,0,.2);border-radius:8px;background:#fffefc}
+.inner .h{background:var(--shade);height:58px;font:15px monospace;padding:20px 18px;box-sizing:border-box}
+.clip{position:absolute;left:170px;top:-42px;width:68px;height:78px;transform:rotate(-2deg)}
+</style></head><body>
+<div class="sheet" id="s">
+<svg class="edge" id="svg"><path class="fill" id="f"/><path class="l1" id="a"/><path class="l2" id="b"/></svg>
+<i class="rings"></i>
+<div class="inner"><div class="h">PROJECT NAME</div></div>
+<svg class="clip" width="52" height="60" viewBox="0 0 52 60">
+ <path d="M14 26C9 8 16 2 26 2s17 6 12 24" fill="none" stroke="#111" stroke-width="4.2" stroke-linecap="round"/>
+ <path d="M14 26C9 8 16 2 26 2s17 6 12 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+ <path d="M7 24L45 28L41 58L3 54Z" fill="#111" stroke="#111" stroke-width="2" stroke-linejoin="round"/>
+ <path d="M12 36L34 39" stroke="#fff" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>
+</svg></div>
+<script>
+function rng(seed){return()=>{seed|=0;seed=seed+0x6d2b79f5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function roughEdge(w,h,seed,o={}){
+ const {inset=3,fine=5,fineAmp=.9,coarseWave=70,coarseAmp=1.8}=o;
+ const r=rng(seed), ph=[r()*6.28,r()*6.28,r()*6.28,r()*6.28];
+ const pts=[];
+ const side=(ax,ay,bx,by,nx,ny,k)=>{const L=Math.hypot(bx-ax,by-ay),n=Math.max(2,Math.round(L/fine));
+  for(let i=0;i<n;i++){const t=i/n,d=L*t;
+   const off=Math.sin(d/coarseWave*6.28+ph[k])*coarseAmp+Math.sin(d/(coarseWave*.43)*6.28+ph[(k+1)%4])*coarseAmp*.45+(r()*2-1)*fineAmp;
+   pts.push([ax+(bx-ax)*t+nx*off, ay+(by-ay)*t+ny*off]);}};
+ const x0=inset,y0=inset,x1=w-inset,y1=h-inset;
+ side(x0,y0,x1,y0,0,1,0);side(x1,y0,x1,y1,1,0,1);side(x1,y1,x0,y1,0,1,2);side(x0,y1,x0,y0,1,0,3);
+ const m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+ let d=`M${m(pts[pts.length-1],pts[0]).map(v=>v.toFixed(1)).join(' ')}`;
+ pts.forEach((p,i)=>{const q=m(p,pts[(i+1)%pts.length]);d+=` Q${p[0].toFixed(1)} ${p[1].toFixed(1)} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`});
+ return d+'Z';}
+const s=document.getElementById('s'),svg=document.getElementById('svg');
+function drawSheet(){
+  const w=s.offsetWidth,h=s.offsetHeight;
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.setAttribute('width','100%');svg.setAttribute('height','100%');
+  const d1=roughEdge(w,h,7);
+  document.getElementById('f').setAttribute('d',d1);
+  document.getElementById('a').setAttribute('d',d1);
+  document.getElementById('b').setAttribute('d',roughEdge(w,h,19,{inset:3.6,fineAmp:.7,coarseAmp:1.4}));
+}
+drawSheet();
+window.addEventListener('resize',drawSheet);
+</script></body></html>

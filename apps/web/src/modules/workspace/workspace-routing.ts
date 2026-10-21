@@ -62,6 +62,6 @@ export function saveActiveWorkspace(workspace: { id: string; name: string }) {
     localStorage.setItem(STORAGE_KEY_WORKSPACE_ID, workspace.id);
     localStorage.setItem(STORAGE_KEY_WORKSPACE_SLUG, toSlug(workspace.name));
   } catch {
-    // Ignore 
+    // Ignore
   }
 }
