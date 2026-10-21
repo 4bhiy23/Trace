@@ -12,7 +12,6 @@ export function toSlug(str: string): string {
   );
 }
 
-
 export function findWorkspaceBySlugOrId(
   workspaces: WorkspaceItem[],
   identifier?: string,
@@ -28,7 +27,6 @@ export function findWorkspaceBySlugOrId(
     null
   );
 }
-
 
 export function findProjectBySlugOrId(
   projects: WorkspaceProject[],
@@ -64,6 +62,6 @@ export function saveActiveWorkspace(workspace: { id: string; name: string }) {
     localStorage.setItem(STORAGE_KEY_WORKSPACE_ID, workspace.id);
     localStorage.setItem(STORAGE_KEY_WORKSPACE_SLUG, toSlug(workspace.name));
   } catch {
-    
+    // Ignore 
   }
 }

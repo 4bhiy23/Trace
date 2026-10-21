@@ -13,7 +13,6 @@ interface CreateBlankCardProps {
   punchedHoles?: boolean;
 }
 
-
 export function CreateBlankCard({
   onClick,
   title = "Create a Project",
@@ -90,7 +89,6 @@ export function CreateBlankCard({
           </button>
         </div>
       </RoughBox>
-
 
       {!punchedHoles && (
         <div className="absolute left-[calc(100%+28px)] top-3.5 pointer-events-none select-none z-20 hidden sm:flex flex-col items-start">

@@ -57,7 +57,6 @@ export function WorkspaceSidebar({
 
   return (
     <aside className="w-[296px] shrink-0 flex flex-col h-screen border-r-2 border-black bg-[#FAF7F2] dark:bg-[#141416] grid-paper text-black dark:text-white select-none transition-colors duration-200 font-brand-sans">
-
       <svg
         width="0"
         height="0"
@@ -100,7 +99,6 @@ export function WorkspaceSidebar({
         </defs>
       </svg>
 
-
       <style>{`
         .sb-rough {
           position: relative;
@@ -139,7 +137,6 @@ export function WorkspaceSidebar({
         }
       `}</style>
 
-   
       <div className="h-14 px-4 border-b-2 border-black dark:border-white/20 flex items-center justify-start shrink-0">
         <button
           type="button"
@@ -289,10 +286,8 @@ export function WorkspaceSidebar({
                   </div>
                 )}
 
-         
                 <div className="border-t-[1.5px] border-black/30 dark:border-white/20 my-1.5" />
 
-               
                 <button
                   type="button"
                   onClick={() => {
@@ -310,11 +305,8 @@ export function WorkspaceSidebar({
         </div>
       </div>
 
-
       <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-6">
-
         <div>
- 
           <div className="flex items-center gap-2 mb-2.5 px-0.5">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-black dark:text-white shrink-0">
               OVERVIEW
@@ -323,7 +315,6 @@ export function WorkspaceSidebar({
           </div>
 
           <div className="space-y-1.5">
-      
             {currentView === "dashboard" || currentView === "all" ? (
               <button
                 type="button"
@@ -401,7 +392,6 @@ export function WorkspaceSidebar({
 
         {/* PROJECTS SECTION */}
         <div>
-         
           <div className="flex items-center gap-2 mb-2.5 px-0.5">
             <button
               type="button"
@@ -489,7 +479,6 @@ export function WorkspaceSidebar({
 
       {/* HAND-DRAWN DIVIDER + NEW FILEE + USER PROFILE */}
       <div className="px-3.5 pb-4 pt-1 space-y-3 shrink-0">
-       
         <div className="w-full px-0.5 py-1">
           <svg
             width="100%"

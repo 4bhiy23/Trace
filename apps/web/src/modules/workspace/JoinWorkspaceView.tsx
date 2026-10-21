@@ -188,7 +188,6 @@ export function JoinWorkspaceView() {
 
       {/* Main Notebook Stack Card with 3D layers (§17.4) */}
       <div className="relative w-full max-w-[560px] my-6 select-none animate-in zoom-in-95 duration-200">
-
         <div
           className="absolute top-3 left-3 -right-4 -bottom-4 bg-[#111] rounded-2xl pointer-events-none z-0"
           aria-hidden="true"
@@ -199,7 +198,6 @@ export function JoinWorkspaceView() {
           aria-hidden="true"
         />
 
-
         <div
           className="relative z-10 bg-[#FAF5EC] border-2 border-[#111] rounded-lg shadow-[1px_2px_0px_rgba(0,0,0,0.08)]"
           style={{
@@ -208,16 +206,13 @@ export function JoinWorkspaceView() {
             backgroundSize: "22px 22px",
           }}
         >
-
           <div className="absolute left-6 right-6 -top-5 z-20 pointer-events-none">
             <SpiralBinding seed={9} />
           </div>
 
           <div className="p-5 sm:p-7 pt-11 sm:pt-12">
-
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
-            
                 <div className="w-12 h-12 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
                   <UserPlus className="w-6 h-6 stroke-[2.2]" />
                 </div>
@@ -230,7 +225,7 @@ export function JoinWorkspaceView() {
                     <h2 className="font-brand-sans font-black text-2xl tracking-tight text-[#111] leading-none">
                       Join Workspace
                     </h2>
-            
+
                     <svg
                       width="18"
                       height="16"
@@ -251,7 +246,6 @@ export function JoinWorkspaceView() {
                 </div>
               </div>
 
-          
               <button
                 type="button"
                 onClick={() => router.push("/workspace")}
@@ -262,9 +256,7 @@ export function JoinWorkspaceView() {
               </button>
             </div>
 
-     
             <div className="w-full border-b-[1.5px] border-black my-4" />
-
 
             {isSessionPending ? (
               <div className="py-10 flex flex-col items-center justify-center gap-3">
@@ -296,7 +288,6 @@ export function JoinWorkspaceView() {
                   </div>
                 </div>
 
-             
                 <div className="pt-3 flex items-center justify-end gap-3.5 border-t border-black/20">
                   <a
                     href={`/signup?callbackUrl=${encodeURIComponent(currentUrl)}`}
@@ -341,7 +332,6 @@ export function JoinWorkspaceView() {
                 </div>
               </div>
             ) : !token ? (
-           
               <div className="space-y-4">
                 <div className="join-rough-card w-full !items-start flex-col gap-1 py-3 px-3.5">
                   <div className="flex items-center gap-1.5 text-red-600 font-brand-sans font-bold text-xs uppercase">
@@ -394,7 +384,6 @@ export function JoinWorkspaceView() {
             ) : (
               /* Authenticated & Token Ready */
               <div className="space-y-4">
-            
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111]">
@@ -434,7 +423,6 @@ export function JoinWorkspaceView() {
                   </div>
                 </div>
 
-
                 {errorMessage && (
                   <div className="join-rough-card w-full !items-start flex-col gap-1 py-3 px-3.5 border-red-600">
                     <div className="flex items-center gap-1.5 text-red-600 font-brand-sans font-bold text-xs uppercase">
@@ -457,7 +445,6 @@ export function JoinWorkspaceView() {
                   </div>
                 )}
 
-
                 <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#555] px-1">
                   <div className="w-3.5 h-3.5 border border-black rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold">
                     i
@@ -467,16 +454,14 @@ export function JoinWorkspaceView() {
                   </span>
                 </div>
 
-  
                 <div className="pt-3 flex items-center justify-end gap-3.5 border-t border-black/20">
-              
                   <button
                     type="button"
                     onClick={() => router.push("/workspace")}
                     className="join-rough-btn font-brand-sans font-black text-xs uppercase tracking-wider text-black"
                   >
                     <span>CANCEL</span>
-                
+
                     <svg
                       className="absolute right-1 bottom-1 w-3.5 h-3.5 pointer-events-none z-10"
                       viewBox="0 0 16 16"
@@ -492,7 +477,6 @@ export function JoinWorkspaceView() {
                     </svg>
                   </button>
 
-     
                   <button
                     type="button"
                     onClick={handleAccept}
@@ -505,7 +489,7 @@ export function JoinWorkspaceView() {
                         ? "JOINING..."
                         : "ACCEPT INVITATION"}
                     </span>
-        
+
                     <svg
                       className="absolute right-1 bottom-1 w-3.5 h-3.5 pointer-events-none z-10"
                       viewBox="0 0 16 16"

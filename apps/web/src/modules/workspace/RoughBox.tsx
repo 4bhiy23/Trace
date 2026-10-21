@@ -381,7 +381,6 @@ export function RoughBox({
         />
       )}
 
- 
       {tape === "tr" && (
         <span
           className="tape"
@@ -423,7 +422,6 @@ export function RoughBox({
         />
       )}
 
-     
       {clip && (
         <BinderClip
           className="clip"

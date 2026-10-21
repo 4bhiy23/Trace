@@ -92,7 +92,6 @@ export function SpiralBinding({
           </linearGradient>
 
           <symbol id="notebook-coil" viewBox="0 0 64 68">
-    
             <path
               d="M32 4.8 C36 4.8 39 8.5 39 16 V51"
               fill="none"
@@ -108,7 +107,7 @@ export function SpiralBinding({
               strokeWidth="1.3"
               strokeLinecap="round"
             />
-         
+
             <path
               d="M25 51 V16 C25 8.5 28 4.8 32 4.8"
               fill="none"
@@ -123,7 +122,7 @@ export function SpiralBinding({
               strokeWidth="3.4"
               strokeLinecap="round"
             />
-  
+
             <rect
               x="21"
               y="47"

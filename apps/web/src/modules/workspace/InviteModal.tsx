@@ -79,7 +79,6 @@ export function InviteModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in-0 duration-200"
       onClick={onClose}
     >
-     
       <svg
         width="0"
         height="0"
@@ -122,7 +121,6 @@ export function InviteModal({
         </defs>
       </svg>
 
-    
       <style>{`
         .inv-rough-btn {
           position: relative;
@@ -416,7 +414,6 @@ export function InviteModal({
               </div>
             </div>
 
-           
             <div className="pt-4 flex items-center justify-end border-t border-black/20 mt-4">
               <button
                 type="button"

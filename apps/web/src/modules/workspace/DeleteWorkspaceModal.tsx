@@ -33,7 +33,6 @@ export function DeleteWorkspaceModal({
 
   if (!isOpen || !workspace) return null;
 
- 
   const isConfirmed =
     confirmInput.trim().toLowerCase() === workspace.name.trim().toLowerCase();
 
@@ -60,7 +59,6 @@ export function DeleteWorkspaceModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in-0 duration-200 select-none"
       onClick={onClose}
     >
-      
       <div
         className="relative w-full max-w-[500px] my-6 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -68,13 +66,11 @@ export function DeleteWorkspaceModal({
         aria-modal="true"
         aria-labelledby="delete-workspace-title"
       >
-      
         <div
           className="absolute -right-3 -bottom-2.5 top-3.5 left-2 bg-[#e6d6a2] border-2 border-[#111] rounded-r-xl pointer-events-none -z-10 shadow-[4px_6px_0px_rgba(0,0,0,0.22)]"
           aria-hidden="true"
         />
 
-      
         <div
           className="relative bg-[#FAF5EC] border-2 border-[#111] rounded-lg shadow-[2px_3px_0px_rgba(0,0,0,0.12)]"
           style={{
@@ -83,16 +79,13 @@ export function DeleteWorkspaceModal({
             backgroundSize: "22px 22px",
           }}
         >
-
           <div className="absolute left-6 right-6 -top-5 z-20 pointer-events-none">
             <SpiralBinding seed={11} />
           </div>
 
           <div className="p-6 pt-12 sm:pt-14 font-brand-sans text-black">
-     
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
-            
                 <div className="w-12 h-12 border-2 border-black bg-[#FFEEEE] text-[#D92D20] flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
                   <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
                 </div>
@@ -118,7 +111,6 @@ export function DeleteWorkspaceModal({
                 </div>
               </div>
 
-         
               <button
                 type="button"
                 onClick={onClose}
@@ -129,10 +121,8 @@ export function DeleteWorkspaceModal({
               </button>
             </div>
 
-
             <div className="w-full border-b-[1.5px] border-black my-4" />
 
-       
             <div className="mb-4 p-3.5 bg-[#FFF3EE] border-2 border-[#D92D20] rounded-[3px] shadow-[2px_2px_0px_rgba(217,45,32,0.15)] text-xs text-black/90 space-y-1.5">
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-[#D92D20] shrink-0 mt-0.5" />
@@ -153,7 +143,6 @@ export function DeleteWorkspaceModal({
               </div>
             </div>
 
-           
             <form onSubmit={handleDelete} className="space-y-4">
               <div>
                 <label
@@ -178,7 +167,6 @@ export function DeleteWorkspaceModal({
                 />
               </div>
 
-            
               {errorMessage && (
                 <div className="p-2.5 bg-red-100 border-2 border-red-600 text-red-900 text-xs font-mono font-bold rounded-[2px] flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
@@ -186,7 +174,6 @@ export function DeleteWorkspaceModal({
                 </div>
               )}
 
-              
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-black/20">
                 <button
                   type="button"

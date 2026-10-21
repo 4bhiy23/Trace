@@ -240,17 +240,14 @@ export function FilesTable({
                       </div>
                     </div>
 
-           
                     <div className="col-span-2 flex items-center min-w-0">
                       {renderTypeBadge(file.type)}
                     </div>
 
-              
                     <div className="col-span-2 hidden sm:flex items-center font-mono text-xs text-[#636363] dark:text-white/70 min-w-0 truncate">
                       {file.createdAt}
                     </div>
 
-                 
                     <div className="col-span-2 flex items-center font-mono text-xs text-[#636363] dark:text-white/70 min-w-0 truncate">
                       {file.editedAt}
                     </div>

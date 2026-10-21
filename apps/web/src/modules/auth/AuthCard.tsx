@@ -119,7 +119,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
 
   return (
     <div className="relative w-full max-w-[490px]">
-   
       <div
         aria-hidden="true"
         className="absolute pointer-events-none select-none left-[calc(100%+10px)] -top-[6px] z-30"
@@ -165,23 +164,19 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
         className="w-full"
         bodyClassName="p-6 sm:py-7 sm:px-8 text-black"
       >
-       
         <div className="flex justify-center mb-2.5">
           <TraceLogo size={46} className="text-black" />
         </div>
 
-
         <h2 className="font-brand-display text-[clamp(24px,2.5vw,28px)] leading-[1.2] font-bold tracking-[-0.5px] text-center text-black uppercase">
           {mode === "sign-up" ? "CREATE YOUR ACCOUNT" : "WELCOME BACK"}
         </h2>
-
 
         <p className="font-brand-sans text-[14px] sm:text-[15px] font-normal leading-[1.4] tracking-normal text-[#555555] text-center mt-1 mb-4">
           {mode === "sign-up"
             ? "Sign up to start creating together."
             : "Sign in to access your creative workspace."}
         </p>
-
 
         {statusMessage && (
           <div
@@ -208,7 +203,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
           </div>
         )}
 
-   
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "sign-up" && (
             <div>
@@ -231,7 +225,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
             </div>
           )}
 
-       
           <div>
             <label
               htmlFor={emailId}
@@ -251,7 +244,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
               className="w-full h-11 px-3.5 font-brand-sans text-[14px] font-normal leading-[1.5] tracking-normal bg-white text-black border-[1.5px] border-black rounded-none placeholder:text-[#888888] shadow-[3px_3px_0px_0px_#000000] focus:outline-none focus:ring-1 focus:ring-black transition-all"
             />
           </div>
-
 
           <div>
             <label
@@ -294,7 +286,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
             </div>
           </div>
 
-       
           <button
             type="submit"
             disabled={isSubmitting}
@@ -313,7 +304,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
           </button>
         </form>
 
-       
         <div className="relative my-4 flex items-center justify-center">
           <div className="w-full border-t border-black/20" />
           <span className="absolute bg-[#F5F2EB] px-2.5 py-0.5 border-[1.5px] border-black shadow-[2px_2px_0px_0px_#000000] font-roboto-mono text-[11px] font-semibold tracking-[0.5px] text-black uppercase">
@@ -323,7 +313,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
 
         {/* Social Logins */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          
           <button
             type="button"
             disabled={isSubmitting || socialLoading !== null}
@@ -357,7 +346,6 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
             </span>
           </button>
 
-   
           <button
             type="button"
             disabled={isSubmitting || socialLoading !== null}

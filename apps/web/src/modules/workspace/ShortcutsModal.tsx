@@ -33,7 +33,6 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-0 duration-200 overflow-y-auto"
       onClick={onClose}
     >
-   
       <svg
         width="0"
         height="0"
@@ -91,7 +90,6 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
           </filter>
         </defs>
       </svg>
-
 
       <style>{`
         .sc-rough {
@@ -250,10 +248,8 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
           </div>
 
           <div className="p-5 sm:p-7 pt-11 sm:pt-12">
-       
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
-             
                 <div className="sc-rough sc-rough--lime w-12 h-12 text-black flex items-center justify-center shrink-0">
                   <Keyboard className="w-6 h-6 stroke-[2.2]" />
                 </div>
@@ -266,7 +262,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                     <h2 className="font-brand-sans font-black text-2xl tracking-tight text-[#111] leading-none">
                       Keyboard Shortcuts
                     </h2>
-          
+
                     <svg
                       width="18"
                       height="16"
@@ -284,7 +280,6 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                 </div>
               </div>
 
-      
               <button
                 type="button"
                 onClick={onClose}
@@ -295,10 +290,8 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
               </button>
             </div>
 
-
             <div className="w-full border-b-[1.5px] border-black my-4" />
 
-           
             <div className="space-y-2.5">
               {shortcuts.map((s) => (
                 <div key={s.key} className="sc-rough-card">
@@ -323,7 +316,6 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
               <span className="text-black font-bold">Docs &amp; Specs ↗</span>
             </div>
 
-          
             <div className="mt-5 flex justify-end">
               <button
                 type="button"

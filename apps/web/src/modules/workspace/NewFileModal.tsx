@@ -109,7 +109,6 @@ export function NewFileModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in-0 duration-200"
       onClick={onClose}
     >
-    
       <svg
         width="0"
         height="0"
@@ -151,7 +150,6 @@ export function NewFileModal({
           </filter>
         </defs>
       </svg>
-
 
       <style>{`
         .modal-rough-btn {
@@ -226,17 +224,14 @@ export function NewFileModal({
         }
       `}</style>
 
-
       <div
         className="relative w-full max-w-[540px] my-6 select-none animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-
         <div
           className="absolute -right-3 -bottom-2.5 top-3.5 left-2 bg-[#e6d6a2] border-2 border-[#111] rounded-r-xl pointer-events-none -z-10 shadow-[4px_6px_0px_rgba(0,0,0,0.22)]"
           aria-hidden="true"
         />
-
 
         <div
           className="relative bg-[#FAF5EC] border-2 border-[#111] rounded-lg shadow-[2px_3px_0px_rgba(0,0,0,0.12)]"
@@ -246,13 +241,11 @@ export function NewFileModal({
             backgroundSize: "22px 22px",
           }}
         >
-    
           <div className="absolute left-6 right-6 -top-5 z-20 pointer-events-none">
             <SpiralBinding seed={7} />
           </div>
 
           <div className="p-5 sm:p-7 pt-11 sm:pt-12">
-       
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#636056] mb-1">
@@ -262,7 +255,7 @@ export function NewFileModal({
                   <h2 className="font-brand-sans font-black text-2xl sm:text-[26px] tracking-tight text-[#111] leading-none">
                     Draft New Canvas
                   </h2>
-                  
+
                   <svg
                     width="18"
                     height="16"
@@ -283,7 +276,6 @@ export function NewFileModal({
                 </p>
               </div>
 
-              
               <button
                 type="button"
                 onClick={onClose}
@@ -294,12 +286,9 @@ export function NewFileModal({
               </button>
             </div>
 
-
             <div className="w-full border-b-[1.5px] border-black my-4" />
 
-           
             <form onSubmit={handleSubmit} className="space-y-4">
-              
               <div>
                 <label className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5">
                   FILE NAME
@@ -320,7 +309,6 @@ export function NewFileModal({
                 </div>
               </div>
 
-           
               <div>
                 <label className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5">
                   TARGET PROJECT
@@ -369,10 +357,8 @@ export function NewFileModal({
 
                     return (
                       <div key={option.type} className="relative">
-                       
                         {isSelected && (
                           <>
-                            
                             <div
                               className="absolute -left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10 hidden sm:block"
                               aria-hidden="true"
@@ -392,7 +378,6 @@ export function NewFileModal({
                               </svg>
                             </div>
 
-                       
                             <div
                               className="absolute -right-4 top-1/2 -translate-y-1/2 pointer-events-none z-10 hidden sm:block"
                               aria-hidden="true"
@@ -423,7 +408,6 @@ export function NewFileModal({
                           )}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-          
                             <div className="w-9 h-9 border-2 border-black bg-white flex items-center justify-center shrink-0 rounded-[2px] shadow-[1px_1px_0px_#000]">
                               <IconComponent className="w-4 h-4 stroke-[2.2] text-black" />
                             </div>
@@ -438,7 +422,6 @@ export function NewFileModal({
                             </div>
                           </div>
 
-                      
                           <div
                             className={cn(
                               "w-5 h-5 rounded-full border-2 border-black shrink-0 transition-colors ml-3",
@@ -454,16 +437,14 @@ export function NewFileModal({
                 </div>
               </div>
 
-      
               <div className="pt-3 flex items-center justify-end gap-3.5">
-       
                 <button
                   type="button"
                   onClick={onClose}
                   className="modal-rough-btn font-brand-sans font-black text-xs uppercase tracking-wider text-black"
                 >
                   <span>CANCEL</span>
-             
+
                   <svg
                     className="absolute right-1 bottom-1 w-3.5 h-3.5 pointer-events-none z-10"
                     viewBox="0 0 16 16"
@@ -479,13 +460,12 @@ export function NewFileModal({
                   </svg>
                 </button>
 
-      
                 <button
                   type="submit"
                   className="modal-rough-btn modal-rough-btn--lime font-brand-sans font-black text-xs uppercase tracking-wider text-black"
                 >
                   <span>CREATE FILE</span>
-            
+
                   <svg
                     className="absolute right-1 bottom-1 w-3.5 h-3.5 pointer-events-none z-10"
                     viewBox="0 0 16 16"

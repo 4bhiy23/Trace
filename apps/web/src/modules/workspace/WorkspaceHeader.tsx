@@ -46,7 +46,6 @@ export function WorkspaceHeader({
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 px-6 h-14 border-b-2 border-black dark:border-white/20 bg-[#FAF7F2] dark:bg-[#141416] grid-paper transition-colors duration-200 font-brand-sans shrink-0 select-none">
-   
       <svg
         width="0"
         height="0"
@@ -89,7 +88,6 @@ export function WorkspaceHeader({
         </defs>
       </svg>
 
-     
       <style>{`
         .hdr-rough {
           position: relative;
@@ -165,7 +163,6 @@ export function WorkspaceHeader({
         }
       `}</style>
 
-   
       <nav className="flex items-center gap-2.5" aria-label="Filter files">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
@@ -187,9 +184,7 @@ export function WorkspaceHeader({
         })}
       </nav>
 
-
       <div className="flex items-center gap-3.5">
-     
         <div className="hdr-rough relative flex items-center h-8 w-64 sm:w-80 md:w-[340px] px-3 transition-all">
           <Search className="w-4 h-4 text-black dark:text-white shrink-0 stroke-[2.2] mr-2.5 pointer-events-none" />
           <input

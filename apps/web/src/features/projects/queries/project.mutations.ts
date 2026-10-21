@@ -48,7 +48,6 @@ export function useUpdateProject(workspaceId?: string) {
   });
 }
 
-
 export function useArchiveProject(workspaceId: string) {
   const queryClient = useQueryClient();
 
@@ -74,7 +73,6 @@ export function useArchiveProject(workspaceId: string) {
   });
 }
 
-
 export function useAddProjectEditor(projectId: string) {
   const queryClient = useQueryClient();
 
@@ -88,7 +86,6 @@ export function useAddProjectEditor(projectId: string) {
     },
   });
 }
-
 
 export function useRemoveProjectEditor(projectId: string) {
   const queryClient = useQueryClient();

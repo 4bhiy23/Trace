@@ -28,7 +28,6 @@ interface ProjectsTableProps {
   workspaceId?: string;
 }
 
-
 export function ProjectsTable({
   projects,
   files,
@@ -84,7 +83,6 @@ export function ProjectsTable({
             right: clearance for right wobbly paper edge
             top and bottom: balanced margins */}
         <div className="my-[32px] sm:my-[36px] ml-[48px] sm:ml-[50px] mr-[8px] sm:mr-[14px] relative">
-     
           <div className="grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 min-h-[46px] items-center bg-[#ece7e0] dark:bg-[#202227] text-xs sm:text-[13px] font-mono font-bold uppercase tracking-[0.5px] text-black dark:text-white select-none">
             <div className="col-span-6 sm:col-span-5 md:col-span-5 lg:col-span-4 flex items-center gap-1.5 min-w-0">
               <span className="truncate">PROJECT NAME</span>
@@ -151,7 +149,6 @@ export function ProjectsTable({
                       onSelectProject(project.id);
                     }}
                   >
-      
                     <div className="col-span-6 sm:col-span-5 md:col-span-5 lg:col-span-4 flex items-center gap-3.5 min-w-0 pr-2">
                       <div className="shrink-0 w-9 h-9 border rounded-[4px] flex items-center justify-center transition-colors border-black dark:border-white/40 bg-transparent text-black dark:text-white group-hover:bg-[#E9FFA3] group-hover:text-black">
                         <Folder className="w-4 h-4 stroke-[1.8]" />
@@ -181,7 +178,6 @@ export function ProjectsTable({
                       )}
                     </div>
 
-               
                     <div className="col-span-2 hidden sm:flex items-center min-w-0">
                       <span className="inline-flex items-center px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-[0.35px] border border-black bg-white dark:bg-black text-black dark:text-white rounded-[4px] whitespace-nowrap">
                         {count} {count === 1 ? "CANVAS" : "CANVASES"}
@@ -211,7 +207,6 @@ export function ProjectsTable({
                       {project.updatedAt || project.createdAt || "18/10/2026"}
                     </div>
 
-              
                     <div className="col-span-6 sm:col-span-5 md:col-span-3 lg:col-span-2 flex items-center justify-end gap-2 sm:gap-3 shrink-0 whitespace-nowrap pr-1">
                       <button
                         type="button"
@@ -225,7 +220,6 @@ export function ProjectsTable({
                         <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
 
-        
                       <div className="relative shrink-0">
                         <button
                           type="button"
@@ -239,7 +233,6 @@ export function ProjectsTable({
                           <MoreHorizontal className="w-5 h-5 stroke-[2.2]" />
                         </button>
 
-       
                         {isMenuOpen && (
                           <>
                             <div
@@ -270,7 +263,6 @@ export function ProjectsTable({
                                 <span>Open Project</span>
                               </button>
 
-                        
                               {isOwnerOrAdmin && workspaceId && (
                                 <button
                                   type="button"

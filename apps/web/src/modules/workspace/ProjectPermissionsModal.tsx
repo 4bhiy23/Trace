@@ -81,7 +81,6 @@ export function ProjectPermissionsModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in-0 duration-200"
       onClick={onClose}
     >
-
       <svg
         width="0"
         height="0"
@@ -123,7 +122,6 @@ export function ProjectPermissionsModal({
           </filter>
         </defs>
       </svg>
-
 
       <style>{`
         .perm-rough-btn {
@@ -193,23 +191,19 @@ export function ProjectPermissionsModal({
         }
       `}</style>
 
-
       <div
         className="relative w-full max-w-[560px] my-6 select-none animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-
         <div
           className="absolute -right-3.5 -bottom-3.5 top-4 left-3 bg-[#111] rounded-r-2xl rounded-b-xl pointer-events-none -z-20"
           aria-hidden="true"
         />
 
-
         <div
           className="absolute -right-2.5 -bottom-2 top-3.5 left-2 bg-[#f2e3a7] border-2 border-[#111] rounded-r-xl rounded-b-lg pointer-events-none -z-10 shadow-[2px_3px_0px_rgba(0,0,0,0.18)]"
           aria-hidden="true"
         />
-
 
         <div
           className="relative bg-[#FAF5EC] border-2 border-[#111] rounded-lg shadow-[2px_3px_0px_rgba(0,0,0,0.12)]"
@@ -219,13 +213,11 @@ export function ProjectPermissionsModal({
             backgroundSize: "22px 22px",
           }}
         >
-
           <div className="absolute left-6 right-6 -top-5 z-20 pointer-events-none">
             <SpiralBinding seed={11} />
           </div>
 
           <div className="p-5 sm:p-7 pt-11 sm:pt-12">
-
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 <div className="w-12 h-12 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
@@ -240,7 +232,7 @@ export function ProjectPermissionsModal({
                     <h2 className="font-brand-sans font-black text-2xl tracking-tight text-[#111] leading-none truncate">
                       {project.name}
                     </h2>
-        
+
                     <svg
                       width="18"
                       height="16"
@@ -262,7 +254,6 @@ export function ProjectPermissionsModal({
                 </div>
               </div>
 
-              
               <button
                 type="button"
                 onClick={onClose}
@@ -273,10 +264,8 @@ export function ProjectPermissionsModal({
               </button>
             </div>
 
-            
             <div className="w-full border-b-[1.5px] border-black my-4" />
 
-          
             {errorMessage && (
               <div className="mb-4 p-3 bg-[#FFF1F0] border-2 border-[#E03E2D] rounded-[2px] flex items-center gap-2 text-xs font-mono text-[#E03E2D] font-bold">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -284,7 +273,6 @@ export function ProjectPermissionsModal({
               </div>
             )}
 
-     
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111]">
@@ -394,7 +382,6 @@ export function ProjectPermissionsModal({
               )}
             </div>
 
- 
             <div className="pt-4 flex items-center justify-between border-t border-black/20 mt-4">
               <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#555]">
                 <div className="w-3.5 h-3.5 border border-black rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold">
