@@ -2,6 +2,8 @@ import type { RequestHandler, Response } from "express";
 import {
   canEditProject,
   canWorkspace,
+  getProjectAccess,
+  type ProjectAccess,
   type WorkspaceRole,
 } from "@trace/shared";
 import { and, eq } from "drizzle-orm";
@@ -47,7 +49,7 @@ export function getProjectContext(response: Response) {
         archivedAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
-        access: "editor" | "viewer";
+        access: ProjectAccess;
       }
     | undefined;
   if (!context) throw new HttpError(403, "FORBIDDEN", "Project access denied");
@@ -159,9 +161,7 @@ export function requireProjectAccess(
       archivedAt: result.archivedAt,
       createdAt: result.createdAt,
       updatedAt: result.updatedAt,
-      access: canEditProject(result.role, result.editorId != null)
-        ? "editor"
-        : "viewer",
+      access: getProjectAccess(result.role, result.editorId != null),
     };
     next();
   };

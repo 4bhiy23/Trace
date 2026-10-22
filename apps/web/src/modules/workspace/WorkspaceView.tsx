@@ -20,6 +20,7 @@ import { InviteModal } from "./InviteModal";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { DeleteWorkspaceModal } from "./DeleteWorkspaceModal";
+import { CollaboratorsDirectory } from "./CollaboratorsDirectory";
 import { useAuth } from "@/modules/auth/AuthGuard";
 import {
   WorkspaceFile,
@@ -39,6 +40,7 @@ import { projectQueries } from "@/features/projects/queries/project.options";
 import {
   useUpdateProject,
   useArchiveProject,
+  usePermanentlyDeleteArchivedProject,
 } from "@/features/projects/queries/project.mutations";
 import {
   toSlug,
@@ -119,7 +121,7 @@ export function WorkspaceView() {
 
   const slug = (params?.slug as string[] | undefined) || [];
   const workspaceSlugParam = slug[0];
-  const sectionParam = slug[1]; // "project" | "archived"
+  const sectionParam = slug[1]; // "project" | "archived" | "collaborators"
   const projectSlugParam = slug[2]; // e.g. "asdfg"
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
@@ -226,6 +228,8 @@ export function WorkspaceView() {
 
   const updateProjectMutation = useUpdateProject(effectiveWorkspaceId);
   const archiveProjectMutation = useArchiveProject(effectiveWorkspaceId);
+  const permanentlyDeleteProjectMutation =
+    usePermanentlyDeleteArchivedProject(effectiveWorkspaceId);
 
   // Sync active workspace ID and maintain URL when on /workspace or /dashboard
   useEffect(() => {
@@ -319,6 +323,11 @@ export function WorkspaceView() {
 
   // Synchronize view state from route segments
   useEffect(() => {
+    if (sectionParam === "collaborators") {
+      setCurrentView("collaborators");
+      return;
+    }
+
     if (sectionParam === "archived") {
       setCurrentView("archived");
       return;
@@ -437,6 +446,8 @@ export function WorkspaceView() {
 
       if (view === "dashboard") {
         router.push(`/workspace/${wsSlug}`);
+      } else if (view === "collaborators") {
+        router.push(`/workspace/${wsSlug}/collaborators`);
       } else if (view === "project") {
         router.push(`/workspace/${wsSlug}/project`);
       } else if (view === "archived") {
@@ -567,7 +578,7 @@ export function WorkspaceView() {
     }
   };
 
-  const handleDeleteProject = async (projectId: string) => {
+  const handleArchiveProject = async (projectId: string) => {
     const proj = allProjects.find((p) => p.id === projectId);
     try {
       await archiveProjectMutation.mutateAsync(projectId);
@@ -578,8 +589,25 @@ export function WorkspaceView() {
       showToast(`Archived project "${proj?.name || ""}"`);
     } catch (err: unknown) {
       showToast(
-        err instanceof Error ? err.message : "Failed to delete project",
+        err instanceof Error ? err.message : "Failed to archive project",
       );
+    }
+  };
+
+  const handlePermanentlyDeleteProject = async (projectId: string) => {
+    const proj = allProjects.find((p) => p.id === projectId);
+    try {
+      await permanentlyDeleteProjectMutation.mutateAsync(projectId);
+      setFiles((prev) => prev.filter((file) => file.projectId !== projectId));
+      if (currentView === `project:${projectId}`) {
+        setCurrentView("dashboard");
+      }
+      showToast(`Permanently deleted project "${proj?.name || ""}"`);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to permanently delete project";
+      showToast(message);
+      throw err;
     }
   };
 
@@ -725,6 +753,7 @@ export function WorkspaceView() {
         onSelectWorkspace={handleSelectWorkspace}
         onOpenNewWorkspaceModal={() => setIsCreateWorkspaceModalOpen(true)}
         onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
+        onLeaveWorkspace={() => router.replace("/workspace")}
       />
 
       {/* Main Content Area */}
@@ -741,6 +770,15 @@ export function WorkspaceView() {
         {/* Content Body with Technical Grid Paper */}
         <main className="grid-paper relative min-h-0 flex-1 overflow-y-auto p-6 md:p-8 animate-in fade-in-0 duration-200 ease-out">
           <div className="max-w-6xl mx-auto space-y-6 pb-20">
+            {currentView === "collaborators" ? (
+              <CollaboratorsDirectory
+                workspaceId={effectiveWorkspaceId}
+                workspaceName={activeWorkspace?.name}
+                workspaceRole={activeWorkspace?.role}
+                isDefaultWorkspace={activeWorkspace?.isDefault}
+              />
+            ) : (
+              <>
             {/* Project Header Banner when a project is chosen (§12 & §13) */}
             {selectedProject && (
               <div className="relative pt-2 pb-1">
@@ -774,7 +812,7 @@ export function WorkspaceView() {
 
                     <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
                       {/* 3-dots actions button (Owner & Admin only) */}
-                      {isOwnerOrAdmin && (
+                      {isOwnerOrAdmin && !selectedProject.archivedAt && (
                         <div className="relative">
                           <button
                             type="button"
@@ -805,13 +843,13 @@ export function WorkspaceView() {
                                   type="button"
                                   onClick={() => {
                                     setIsProjectHeaderMenuOpen(false);
-                                    handleDeleteProject(selectedProject.id);
+                                    handleArchiveProject(selectedProject.id);
                                     handleSelectView("dashboard");
                                   }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
                                 >
                                   <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-                                  <span>Delete Project</span>
+                                  <span>Archive Project</span>
                                 </button>
                               </div>
                             </>
@@ -926,8 +964,13 @@ export function WorkspaceView() {
                 onRenameProject={
                   isOwnerOrAdmin ? handleRenameProject : undefined
                 }
-                onDeleteProject={
-                  isOwnerOrAdmin ? handleDeleteProject : undefined
+                onArchiveProject={
+                  isOwnerOrAdmin ? handleArchiveProject : undefined
+                }
+                onPermanentlyDeleteProject={
+                  activeWorkspace?.role === "owner"
+                    ? handlePermanentlyDeleteProject
+                    : undefined
                 }
                 onOpenNewProjectModal={
                   isOwnerOrAdmin
@@ -936,6 +979,8 @@ export function WorkspaceView() {
                 }
                 workspaceId={effectiveWorkspaceId}
               />
+            )}
+              </>
             )}
           </div>
         </main>

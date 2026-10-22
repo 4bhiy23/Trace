@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { apiPaths } from "@trace/shared";
+import { apiPaths, projectAccessSchema } from "@trace/shared";
 
 process.env.RESEND_API_KEY ??= "test-key";
 process.env.RESEND_FROM_EMAIL ??= "noreply@example.com";
@@ -24,6 +24,7 @@ test("OpenAPI documents every workspace and project route", async () => {
     apiPaths.inviteAccept,
     apiPaths.workspaceProjects,
     apiPaths.project,
+    apiPaths.projectPermanentDelete,
     apiPaths.projectEditors,
     apiPaths.projectEditor,
   ];
@@ -38,4 +39,8 @@ test("OpenAPI documents every workspace and project route", async () => {
     { properties?: Record<string, { type?: string }> }
   >;
   assert.equal(schemas.ApiError.properties?.requestId?.type, "string");
+  assert.deepEqual(
+    (schemas.Project.properties?.access as { enum?: string[] }).enum,
+    projectAccessSchema.options,
+  );
 });

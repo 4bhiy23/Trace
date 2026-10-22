@@ -2,6 +2,7 @@ import {
   apiPaths,
   inviteRoleSchema,
   inviteStatusSchema,
+  projectAccessSchema,
   workspaceRoleSchema,
 } from "@trace/shared";
 import { env } from "../../config/env";
@@ -357,6 +358,19 @@ export const openApiDocument = {
         },
       },
     },
+    [openApiPath(apiPaths.projectPermanentDelete)]: {
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }],
+      delete: {
+        tags: ["Projects"],
+        summary: "Permanently delete an archived project",
+        description: "Workspace owner only. The project must already be archived.",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "204": { description: "Project permanently deleted" },
+          ...securedErrors,
+        },
+      },
+    },
     [openApiPath(apiPaths.projectEditors)]: {
       parameters: [{ $ref: "#/components/parameters/ProjectId" }],
       get: {
@@ -593,7 +607,7 @@ export const openApiDocument = {
           id: { type: "string", format: "uuid" },
           workspaceId: { type: "string", format: "uuid" },
           name: { type: "string" },
-          access: { type: "string", enum: ["editor", "viewer"] },
+          access: { type: "string", enum: projectAccessSchema.options },
           archivedAt: { type: "string", format: "date-time", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
