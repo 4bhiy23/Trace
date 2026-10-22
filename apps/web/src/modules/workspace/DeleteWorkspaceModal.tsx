@@ -60,7 +60,7 @@ export function DeleteWorkspaceModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[500px] my-6 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-125 my-6 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -93,7 +93,7 @@ export function DeleteWorkspaceModal({
                 <div className="min-w-0">
                   <div className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#D92D20] mb-0.5 flex items-center gap-2">
                     <span>IRREVERSIBLE ACTION</span>
-                    <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-[#FF4D4D] text-white border border-black rounded-[2px]">
+                    <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-[#FF4D4D] text-white border border-black rounded-xs">
                       DANGER
                     </span>
                   </div>
@@ -115,7 +115,7 @@ export function DeleteWorkspaceModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="w-9 h-9 border-2 border-black bg-white hover:bg-[#FAF5EC] text-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center cursor-pointer shrink-0 rounded-[2px] transition-all"
+                className="w-9 h-9 border-2 border-black bg-white hover:bg-[#FAF5EC] text-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 flex items-center justify-center cursor-pointer shrink-0 rounded-xs transition-all"
               >
                 <X className="w-5 h-5 stroke-[2.6] text-black" />
               </button>
@@ -168,7 +168,7 @@ export function DeleteWorkspaceModal({
               </div>
 
               {errorMessage && (
-                <div className="p-2.5 bg-red-100 border-2 border-red-600 text-red-900 text-xs font-mono font-bold rounded-[2px] flex items-center gap-1.5">
+                <div className="p-2.5 bg-red-100 border-2 border-red-600 text-red-900 text-xs font-mono font-bold rounded-xs flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                   <span>{errorMessage}</span>
                 </div>
@@ -179,7 +179,7 @@ export function DeleteWorkspaceModal({
                   type="button"
                   onClick={onClose}
                   disabled={deleteWorkspaceMutation.isPending}
-                  className="px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider bg-white hover:bg-stone-100 border-2 border-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer rounded-[2px] transition-all disabled:opacity-50"
+                  className="px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider bg-white hover:bg-stone-100 border-2 border-black shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer rounded-xs transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -187,7 +187,7 @@ export function DeleteWorkspaceModal({
                   type="submit"
                   disabled={!isConfirmed || deleteWorkspaceMutation.isPending}
                   className={cn(
-                    "px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider text-white border-2 border-black flex items-center gap-2 rounded-[2px] transition-all",
+                    "px-4 py-2 font-mono font-bold text-xs uppercase tracking-wider text-white border-2 border-black flex items-center gap-2 rounded-xs transition-all",
                     isConfirmed && !deleteWorkspaceMutation.isPending
                       ? "bg-[#FF4D4D] hover:bg-[#ff3333] shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
                       : "bg-[#FF4D4D]/40 text-white/70 border-black/40 cursor-not-allowed shadow-none",

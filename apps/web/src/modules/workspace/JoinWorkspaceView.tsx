@@ -187,14 +187,14 @@ export function JoinWorkspaceView() {
       `}</style>
 
       {/* Main Notebook Stack Card with 3D layers (§17.4) */}
-      <div className="relative w-full max-w-[560px] my-6 select-none animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-140 my-6 select-none animate-in zoom-in-95 duration-200">
         <div
           className="absolute top-3 left-3 -right-4 -bottom-4 bg-[#111] rounded-2xl pointer-events-none z-0"
           aria-hidden="true"
         />
 
         <div
-          className="absolute top-2 left-2 -right-2.5 -bottom-2.5 bg-[#F2E3A7] border-2 border-[#111] rounded-xl pointer-events-none z-[1]"
+          className="absolute top-2 left-2 -right-2.5 -bottom-2.5 bg-[#F2E3A7] border-2 border-[#111] rounded-xl pointer-events-none z-1"
           aria-hidden="true"
         />
 
@@ -213,7 +213,7 @@ export function JoinWorkspaceView() {
           <div className="p-5 sm:p-7 pt-11 sm:pt-12">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
-                <div className="w-12 h-12 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
+                <div className="w-12 h-12 border-2 border-black bg-brand-lime text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
                   <UserPlus className="w-6 h-6 stroke-[2.2]" />
                 </div>
 
@@ -250,7 +250,7 @@ export function JoinWorkspaceView() {
                 type="button"
                 onClick={() => router.push("/workspace")}
                 aria-label="Close"
-                className="join-rough-btn w-9 h-9 !p-0 flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
+                className="join-rough-btn w-9 h-9 p-0! flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
               >
                 <X className="w-5 h-5 stroke-[2.6] text-black" />
               </button>
@@ -277,7 +277,7 @@ export function JoinWorkspaceView() {
                       REQUIRED
                     </span>
                   </div>
-                  <div className="join-rough-card w-full !items-start flex-col gap-1 py-3 px-3.5">
+                  <div className="join-rough-card w-full items-start! flex-col gap-1 py-3 px-3.5">
                     <div className="text-xs font-brand-sans font-bold text-black">
                       Sign in required to accept invitation
                     </div>
@@ -333,7 +333,7 @@ export function JoinWorkspaceView() {
               </div>
             ) : !token ? (
               <div className="space-y-4">
-                <div className="join-rough-card w-full !items-start flex-col gap-1 py-3 px-3.5">
+                <div className="join-rough-card w-full items-start! flex-col gap-1 py-3 px-3.5">
                   <div className="flex items-center gap-1.5 text-red-600 font-brand-sans font-bold text-xs uppercase">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>Missing Invitation Token</span>
@@ -401,7 +401,7 @@ export function JoinWorkspaceView() {
 
                   <div className="join-rough-card w-full justify-between py-2.5 px-3.5">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-[#E9FFA3] flex items-center justify-center shrink-0 font-brand-display text-xs font-bold">
+                      <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-brand-lime flex items-center justify-center shrink-0 font-brand-display text-xs font-bold">
                         {initials}
                       </div>
                       <div className="min-w-0">
@@ -415,7 +415,7 @@ export function JoinWorkspaceView() {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <span className="font-mono text-[10px] font-bold tracking-wider uppercase text-black bg-[#E9FFA3] px-2 py-0.5 border border-black rounded-[2px] flex items-center gap-1">
+                      <span className="font-mono text-[10px] font-bold tracking-wider uppercase text-black bg-brand-lime px-2 py-0.5 border border-black rounded-xs flex items-center gap-1">
                         <Shield className="w-3 h-3 stroke-[2.2]" />
                         <span>ACTIVE</span>
                       </span>
@@ -424,7 +424,7 @@ export function JoinWorkspaceView() {
                 </div>
 
                 {errorMessage && (
-                  <div className="join-rough-card w-full !items-start flex-col gap-1 py-3 px-3.5 border-red-600">
+                  <div className="join-rough-card w-full items-start! flex-col gap-1 py-3 px-3.5 border-red-600">
                     <div className="flex items-center gap-1.5 text-red-600 font-brand-sans font-bold text-xs uppercase">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>Unable to Accept</span>
