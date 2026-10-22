@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--paper:#fffefc;--ink:#111;--hl:#e9ffa3}
+body{margin:0;padding:30px;background:#f4f0e8;background-image:linear-gradient(to right,#e6e0d6 1px,transparent 1px),linear-gradient(#e6e0d6 1px,transparent 1px);background-size:30px 30px;font-family:ui-monospace,monospace;height:300px}
+.rough{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;--fill:var(--paper);--sx:5px;--sy:6px;
+ font:800 17px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#111;cursor:pointer;border:0;background:none;padding:20px 34px}
+.rough::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fill);border:2.5px solid var(--ink);filter:url(#r1)}
+.rough::after{content:"";position:absolute;inset:0;z-index:-2;background:var(--ink);transform:translate(var(--sx),var(--sy));filter:url(#r2)}
+.rough:active{transform:translate(3px,4px);--sx:2px;--sy:2px}
+.rough--lime{--fill:var(--hl)}
+.fold{position:absolute;right:3px;bottom:3px;width:16px;height:16px;pointer-events:none;z-index:1}
+.card{display:flex;width:470px;margin-top:26px;justify-content:space-between;align-items:center;padding:22px 26px;--sx:3px;--sy:5px;font:14px ui-monospace,monospace;cursor:default}
+.card::before{border-width:2px;filter:url(#r1)}
+.ring{width:26px;height:26px;border:2.5px solid #111;border-radius:50%}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<filter id="r1" x="-4%" y="-8%" width="108%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.045 0.07" numOctaves="3" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="r2" x="-4%" y="-8%" width="108%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.05 0.08" numOctaves="3" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs></svg>
+<button class="rough">Cancel<svg class="fold" viewBox="0 0 16 16"><path d="M14 2 L2 14" stroke="#111" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg></button>
+<button class="rough rough--lime" style="margin-left:28px">Create file<svg class="fold" viewBox="0 0 16 16"><path d="M14 2 L2 14" stroke="#111" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg></button>
+<div class="rough card"><span>tables &amp; foreign keys</span><i class="ring"></i></div>
+</body></html>

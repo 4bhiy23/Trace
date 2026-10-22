@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;height:230px;background:#5d5d5b;position:relative;overflow:hidden;font-family:ui-monospace,monospace}
+.stack{position:absolute;left:0;right:14px;top:84px;height:200px;background:#e6d6a2;border:2px solid #111;border-radius:8px}
+.modal{position:absolute;left:0;right:30px;top:70px;height:200px;background:#f8f2e4;border:2px solid #111;border-radius:0 12px 0 0;border-left:0;
+ background-image:linear-gradient(to right,#eee6d4 1px,transparent 1px),linear-gradient(#eee6d4 1px,transparent 1px);background-size:20px 20px;box-shadow:0 2px 0 #111}
+.modal small{position:absolute;left:60px;top:62px;font-size:13px;color:#444;letter-spacing:.5px}
+.spiral{position:absolute;left:40px;right:60px;top:42px;height:68px;pointer-events:none}
+</style></head><body>
+<div class="stack"></div><div class="modal"><small>CANVAS CREATION</small></div>
+<div class="spiral" id="sp"></div>
+<script>
+const PITCH=64, W=64, H=68;
+function rng(seed){return()=>{seed|=0;seed=seed+0x6d2b79f5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const sym=`<symbol id="coil" viewBox="0 0 64 68">
+<path d="M32 4.8 C36 4.8 39 8.5 39 16 V51" fill="none" stroke="#111" stroke-width="3.6" stroke-linecap="round"/>
+<path d="M32 4.8 C36 4.8 39 8.5 39 16 V51" fill="none" stroke="#a39d8f" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/>
+<path d="M25 51 V16 C25 8.5 28 4.8 32 4.8" fill="none" stroke="#111" stroke-width="6.4" stroke-linecap="round"/>
+<path d="M25 51 V16 C25 8.5 28 4.8 32 4.8" fill="none" stroke="url(#metal)" stroke-width="3.4" stroke-linecap="round"/>
+<rect x="21" y="47" width="22" height="17" rx="2.2" fill="#0f0e0c"/>
+<path d="M22.6 48.4 H41.4" stroke="#fff" stroke-opacity=".14" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M25 48 V56 M39 48 V56" stroke="#c9c2ae" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/>
+</symbol>`;
+const defs=`<defs><linearGradient id="metal" gradientUnits="userSpaceOnUse" x1="22" x2="28"><stop offset="0" stop-color="#5a5448"/><stop offset=".35" stop-color="#f3efe3"/><stop offset=".7" stop-color="#8d8779"/><stop offset="1" stop-color="#2a2620"/></linearGradient>${sym}</defs>`;
+const el=document.getElementById('sp'), w=el.offsetWidth, n=Math.max(1,Math.floor(w/PITCH)), step=(w-W)/(n-1), r=rng(5);
+let uses='';
+for(let i=0;i<n;i++){const x=i*step+(r()*2-1)*1.2, rot=(r()*2-1)*1.4; uses+=`<use href="#coil" x="${x.toFixed(1)}" y="0" width="${W}" height="${H}" transform="rotate(${rot.toFixed(2)} ${(x+32).toFixed(1)} 40)"/>`}
+el.innerHTML=`<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}">${defs}${uses}</svg>`;
+</script></body></html>

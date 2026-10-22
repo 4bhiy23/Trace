@@ -2,7 +2,10 @@
 
 import { useState, useId } from "react";
 import type { FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { authClient } from "./auth-client";
+import { TraceLogo } from "./TraceLogo";
+import { RoughBox } from "../workspace/RoughBox";
 
 interface AuthCardProps {
   initialMode?: "sign-in" | "sign-up";
@@ -15,7 +18,9 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<"google" | null>(null);
+  const [socialLoading, setSocialLoading] = useState<
+    "google" | "github" | null
+  >(null);
   const [statusMessage, setStatusMessage] = useState<{
     type: "error" | "success" | "info";
     text: string;
@@ -43,16 +48,16 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
             type: "error",
             text:
               error.message ||
-              "Failed to create account. Please check your credentials.",
+              "Failed to create account. Please verify your credentials.",
           });
         } else {
           setStatusMessage({
             type: "success",
-            text: "Account created successfully! Redirecting to workspace...",
+            text: "Account created successfully. Redirecting to workspace...",
           });
           setTimeout(() => {
             window.location.href = "/workspace";
-          }, 800);
+          }, 700);
         }
       } else {
         const { error } = await authClient.signIn.email({
@@ -69,31 +74,31 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
         } else {
           setStatusMessage({
             type: "success",
-            text: "Signed in successfully! Redirecting to workspace...",
+            text: "Signed in successfully. Redirecting to workspace...",
           });
           setTimeout(() => {
             window.location.href = "/workspace";
-          }, 800);
+          }, 700);
         }
       }
     } catch {
       setStatusMessage({
         type: "error",
-        text: "Could not connect to the authentication server. Please verify the server is running.",
+        text: "Could not connect to authentication service. Please verify the server is running.",
       });
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function handleSocialSignIn(provider: "google") {
+  async function handleSocialSignIn(provider: "google" | "github") {
     setStatusMessage(null);
     setSocialLoading(provider);
 
     try {
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: window.location.origin,
+        callbackURL: `${window.location.origin}/workspace`,
       });
 
       if (error) {
@@ -105,7 +110,7 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
     } catch {
       setStatusMessage({
         type: "info",
-        text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} authentication is ready. Ensure OAuth provider credentials are set up on the server.`,
+        text: `${provider.charAt(0).toUpperCase() + provider.slice(1)} authentication is configured. Ensure OAuth environment secrets are set up.`,
       });
     } finally {
       setSocialLoading(null);
@@ -113,107 +118,211 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
   }
 
   return (
-    <div className="w-full max-w-[395px] mx-auto">
-      {/* Auth Card Container */}
-      <div className="relative rounded-2xl bg-[var(--card)] text-[var(--card-foreground)] border border-[var(--border)] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] p-6 sm:p-7 transition-colors duration-200">
-        {/* Subtle decorative top highlight */}
-        <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--ring)]/25 to-transparent pointer-events-none" />
+    <div className="relative w-full max-w-[490px]">
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none select-none left-[calc(100%+10px)] -top-[6px] z-30"
+      >
+        <svg width="28" height="38" viewBox="0 0 28 38" fill="none">
+          <line
+            x1="3"
+            y1="14"
+            x2="10"
+            y2="3"
+            stroke="#FFFFFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <line
+            x1="6"
+            y1="20"
+            x2="19"
+            y2="17"
+            stroke="#FFFFFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <line
+            x1="5"
+            y1="27"
+            x2="15"
+            y2="33"
+            stroke="#FFFFFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
 
-        {/* Card Header */}
-        <div className="text-center mb-4">
-          <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[var(--muted-foreground)] mb-1">
-            {mode === "sign-up" ? "GET STARTED" : "WELCOME BACK"}
-          </p>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            {mode === "sign-up" ? "Hi there!" : "Welcome back!"}
-          </h1>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            {mode === "sign-up"
-              ? "Choose how you want to sign up."
-              : "Choose how you want to sign in."}
-          </p>
+      <RoughBox
+        seed={11}
+        fill="#F5F2EB"
+        rings="none"
+        tape="none"
+        clip={false}
+        shadow="drop-shadow(6px 8px 0 rgba(0,0,0,0.85))"
+        className="w-full"
+        bodyClassName="p-6 sm:py-7 sm:px-8 text-black"
+      >
+        <div className="flex justify-center mb-2.5">
+          <TraceLogo size={46} className="text-black" />
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div
-          role="tablist"
-          aria-label="Authentication mode"
-          className="flex p-0.5 mb-4 rounded-lg bg-[var(--secondary)]/60 border border-[var(--border)]/60"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "sign-in"}
-            onClick={() => {
-              setMode("sign-in");
-              setStatusMessage(null);
-            }}
-            className={`flex-1 py-1 text-[11px] font-medium rounded-md transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[var(--ring)] outline-none cursor-pointer ${
-              mode === "sign-in"
-                ? "bg-[var(--card)] text-[var(--foreground)] shadow-xs font-semibold"
-                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "sign-up"}
-            onClick={() => {
-              setMode("sign-up");
-              setStatusMessage(null);
-            }}
-            className={`flex-1 py-1 text-[11px] font-medium rounded-md transition-all duration-150 focus-visible:ring-2 focus-visible:ring-[var(--ring)] outline-none cursor-pointer ${
-              mode === "sign-up"
-                ? "bg-[var(--card)] text-[var(--foreground)] shadow-xs font-semibold"
-                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+        <h2 className="font-brand-display text-[clamp(24px,2.5vw,28px)] leading-[1.2] font-bold tracking-[-0.5px] text-center text-black uppercase">
+          {mode === "sign-up" ? "CREATE YOUR ACCOUNT" : "WELCOME BACK"}
+        </h2>
 
-        {/* Status Message Banner */}
+        <p className="font-brand-sans text-[14px] sm:text-[15px] font-normal leading-[1.4] tracking-normal text-[#555555] text-center mt-1 mb-4">
+          {mode === "sign-up"
+            ? "Sign up to start creating together."
+            : "Sign in to access your creative workspace."}
+        </p>
+
         {statusMessage && (
           <div
             role="status"
             aria-live="polite"
-            className={`mb-3.5 p-2.5 rounded-lg text-xs flex items-start gap-2 transition-all ${
+            className={`mb-4 p-2.5 text-xs flex items-start gap-2 border-[1.5px] shadow-[3px_3px_0px_0px_#000000] ${
               statusMessage.type === "error"
-                ? "bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20"
+                ? "bg-[#E03E2D]/10 text-[#C12E1E] border-[#E03E2D]"
                 : statusMessage.type === "success"
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  : "bg-[var(--accent)]/40 text-[var(--foreground)] border border-[var(--border)]"
+                  ? "bg-emerald-500/10 text-emerald-900 border-emerald-600"
+                  : "bg-white text-black border-black"
             }`}
           >
-            <span className="shrink-0 mt-0.5 font-bold">
+            <span className="shrink-0 font-bold font-roboto-mono">
               {statusMessage.type === "error"
                 ? "!"
                 : statusMessage.type === "success"
                   ? "✓"
                   : "ℹ"}
             </span>
-            <span className="leading-snug">{statusMessage.text}</span>
+            <span className="leading-snug font-brand-sans text-[13px]">
+              {statusMessage.text}
+            </span>
           </div>
         )}
 
-        {/* Social Authentication Buttons */}
-        <div className="space-y-2 mb-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {mode === "sign-up" && (
+            <div>
+              <label
+                htmlFor={nameId}
+                className="block font-roboto-mono text-[12px] sm:text-[13px] font-semibold leading-[1.3] tracking-[0.5px] uppercase text-black mb-1"
+              >
+                NAME
+              </label>
+              <input
+                id={nameId}
+                name="name"
+                type="text"
+                autoComplete="name"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-11 px-3.5 font-brand-sans text-[14px] font-normal leading-[1.5] tracking-normal bg-white text-black border-[1.5px] border-black rounded-none placeholder:text-[#888888] shadow-[3px_3px_0px_0px_#000000] focus:outline-none focus:ring-1 focus:ring-black transition-all"
+              />
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor={emailId}
+              className="block font-roboto-mono text-[12px] sm:text-[13px] font-semibold leading-[1.3] tracking-[0.5px] uppercase text-black mb-1"
+            >
+              EMAIL
+            </label>
+            <input
+              id={emailId}
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full h-11 px-3.5 font-brand-sans text-[14px] font-normal leading-[1.5] tracking-normal bg-white text-black border-[1.5px] border-black rounded-none placeholder:text-[#888888] shadow-[3px_3px_0px_0px_#000000] focus:outline-none focus:ring-1 focus:ring-black transition-all"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor={passwordId}
+              className="block font-roboto-mono text-[12px] sm:text-[13px] font-semibold leading-[1.3] tracking-[0.5px] uppercase text-black mb-1"
+            >
+              PASSWORD
+            </label>
+            <div className="relative">
+              <input
+                id={passwordId}
+                name="password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={8}
+                autoComplete={
+                  mode === "sign-up" ? "new-password" : "current-password"
+                }
+                placeholder={
+                  mode === "sign-up"
+                    ? "Create a password"
+                    : "Enter your password"
+                }
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-11 pl-3.5 pr-11 font-brand-sans text-[14px] font-normal leading-[1.5] tracking-normal bg-white text-black border-[1.5px] border-black rounded-none placeholder:text-[#888888] shadow-[3px_3px_0px_0px_#000000] focus:outline-none focus:ring-1 focus:ring-black transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-black/60 hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-black cursor-pointer transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-[18px] h-[18px]" strokeWidth={2} />
+                ) : (
+                  <Eye className="w-[18px] h-[18px]" strokeWidth={2} />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-11 mt-1.5 font-roboto-mono text-[13px] sm:text-[14px] font-semibold leading-[1.4] tracking-[0.5px] uppercase bg-black text-white border-[1.5px] border-black rounded-none shadow-[3.5px_3.5px_0px_0px_rgba(0,0,0,0.5)] hover:bg-[#1a1a1a] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>
+                  {mode === "sign-up" ? "CREATING ACCOUNT…" : "SIGNING IN…"}
+                </span>
+              </>
+            ) : (
+              <span>{mode === "sign-up" ? "CREATE ACCOUNT" : "SIGN IN"}</span>
+            )}
+          </button>
+        </form>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-black/20" />
+          <span className="absolute bg-[#F5F2EB] px-2.5 py-0.5 border-[1.5px] border-black shadow-[2px_2px_0px_0px_#000000] font-roboto-mono text-[11px] font-semibold tracking-[0.5px] text-black uppercase">
+            OR
+          </span>
+        </div>
+
+        {/* Social Logins */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <button
             type="button"
             disabled={isSubmitting || socialLoading !== null}
             onClick={() => handleSocialSignIn("google")}
-            className="w-full flex items-center justify-center gap-2.5 py-2 px-3 rounded-lg text-xs font-medium bg-[var(--secondary)]/40 hover:bg-[var(--secondary)]/80 text-[var(--foreground)] border border-[var(--border)] transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[var(--ring)] outline-none cursor-pointer"
+            className="w-full h-11 flex items-center justify-center gap-2 bg-white text-black border-[1.5px] border-black rounded-none font-brand-sans text-[13px] sm:text-[14px] font-semibold leading-[1.4] tracking-normal shadow-[3px_3px_0px_0px_#000000] hover:bg-[#fafafa] active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-[1px_1px_0px_0px_#000000] transition-all cursor-pointer disabled:opacity-50"
           >
             {socialLoading === "google" ? (
-              <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span className="inline-block w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg
-                className="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -232,209 +341,65 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
                 />
               </svg>
             )}
-            <span>Continue with Google</span>
+            <span className="font-brand-sans text-[13px] sm:text-[14px] font-semibold leading-[1.4] tracking-normal">
+              Google
+            </span>
           </button>
-        </div>
-
-        {/* Divider */}
-        <div className="relative my-3.5 text-center">
-          <div
-            className="absolute inset-0 flex items-center"
-            aria-hidden="true"
-          >
-            <div className="w-full border-t border-[var(--border)]" />
-          </div>
-          <span className="relative px-2.5 text-[10px] font-medium tracking-widest text-[var(--muted-foreground)] uppercase bg-[var(--card)]">
-            OR
-          </span>
-        </div>
-
-        {/* Email & Password Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {mode === "sign-up" && (
-            <div>
-              <label
-                htmlFor={nameId}
-                className="block text-[11px] font-medium text-[var(--foreground)] mb-1"
-              >
-                Name
-              </label>
-              <input
-                id={nameId}
-                name="name"
-                type="text"
-                autoComplete="name"
-                placeholder="Ada Lovelace"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--input)]/25 focus:bg-[var(--input)]/40 text-[var(--foreground)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20 outline-none transition-all placeholder:text-[var(--muted-foreground)]/60"
-              />
-            </div>
-          )}
-
-          <div>
-            <label
-              htmlFor={emailId}
-              className="block text-[11px] font-medium text-[var(--foreground)] mb-1"
-            >
-              Email address
-            </label>
-            <input
-              id={emailId}
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--input)]/25 focus:bg-[var(--input)]/40 text-[var(--foreground)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20 outline-none transition-all placeholder:text-[var(--muted-foreground)]/60"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label
-                htmlFor={passwordId}
-                className="block text-[11px] font-medium text-[var(--foreground)]"
-              >
-                Password
-              </label>
-              {mode === "sign-in" && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setStatusMessage({
-                      type: "info",
-                      text: "Password reset instructions will be sent to your registered email address.",
-                    })
-                  }
-                  className="text-[11px] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
-                >
-                  Forgot password?
-                </button>
-              )}
-            </div>
-            <div className="relative">
-              <input
-                id={passwordId}
-                name="password"
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={8}
-                autoComplete={
-                  mode === "sign-up" ? "new-password" : "current-password"
-                }
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 pr-9 rounded-lg text-xs bg-[var(--input)]/25 focus:bg-[var(--input)]/40 text-[var(--foreground)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20 outline-none transition-all placeholder:text-[var(--muted-foreground)]/60"
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-md transition-colors cursor-pointer"
-              >
-                {showPassword ? (
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-            {mode === "sign-up" && (
-              <p className="text-[10px] text-[var(--muted-foreground)] mt-1">
-                Must be at least 8 characters.
-              </p>
-            )}
-          </div>
 
           <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2 px-3 mt-1 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-[0.99] transition-all duration-150 shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[var(--ring)] outline-none cursor-pointer"
+            type="button"
+            disabled={isSubmitting || socialLoading !== null}
+            onClick={() => handleSocialSignIn("github")}
+            className="w-full h-11 flex items-center justify-center gap-2 bg-white text-black border-[1.5px] border-black rounded-none font-brand-sans text-[13px] sm:text-[14px] font-semibold leading-[1.4] tracking-normal shadow-[3px_3px_0px_0px_#000000] hover:bg-[#fafafa] active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-[1px_1px_0px_0px_#000000] transition-all cursor-pointer disabled:opacity-50"
           >
-            {isSubmitting ? (
-              <>
-                <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span>
-                  {mode === "sign-up" ? "Creating account…" : "Signing in…"}
-                </span>
-              </>
+            {socialLoading === "github" ? (
+              <span className="inline-block w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
             ) : (
-              <span>{mode === "sign-up" ? "Create account" : "Sign in"}</span>
+              <svg className="w-4 h-4 fill-black shrink-0" viewBox="0 0 24 24">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                />
+              </svg>
             )}
+            <span className="font-brand-sans text-[13px] sm:text-[14px] font-semibold leading-[1.4] tracking-normal">
+              GitHub
+            </span>
           </button>
-        </form>
-
-        {/* Card Footer toggle */}
-        <div className="mt-4 pt-3.5 border-t border-[var(--border)]/60 text-center">
-          <p className="text-[11px] text-[var(--muted-foreground)]">
-            {mode === "sign-up"
-              ? "Already have an account?"
-              : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === "sign-up" ? "sign-in" : "sign-up");
-                setStatusMessage(null);
-              }}
-              className="font-medium text-[var(--foreground)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--ring)] rounded px-0.5 outline-none cursor-pointer"
-            >
-              {mode === "sign-up" ? "Sign in" : "Sign up"}
-            </button>
-          </p>
         </div>
-      </div>
 
-      {/* Terms of Service & Privacy Policy Notice */}
-      <p className="text-[11px] text-[var(--muted-foreground)]/80 text-center mt-4 leading-relaxed max-w-xs mx-auto">
-        By continuing you are agreeing to our{" "}
-        <a
-          href="#terms"
-          className="underline hover:text-[var(--foreground)] transition-colors"
-        >
-          Terms of Use
-        </a>{" "}
-        and{" "}
-        <a
-          href="#privacy"
-          className="underline hover:text-[var(--foreground)] transition-colors"
-        >
-          Privacy Policy
-        </a>
-      </p>
+        {/* Switch Mode Link */}
+        <div className="text-center font-brand-sans text-[13px] font-normal leading-[1.4] tracking-normal text-[#555555] mb-2">
+          <span>
+            {mode === "sign-up"
+              ? "Already have an account? "
+              : "Don't have an account? "}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "sign-up" ? "sign-in" : "sign-up");
+              setStatusMessage(null);
+            }}
+            className="text-[#E03E2D] font-brand-sans text-[13px] font-semibold leading-[1.4] tracking-normal hover:underline cursor-pointer transition-colors"
+          >
+            {mode === "sign-up" ? "Sign in" : "Sign up"}
+          </button>
+        </div>
+
+        {/* Privacy Terms Notice */}
+        <p className="font-brand-sans text-[11px] font-normal leading-[1.4] tracking-normal text-[#666666] text-center">
+          By continuing you agree to our{" "}
+          <a
+            href="#privacy"
+            className="underline hover:text-black transition-colors font-brand-sans"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+      </RoughBox>
     </div>
   );
 }

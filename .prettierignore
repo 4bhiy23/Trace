@@ -5,3 +5,4 @@ dist
 **/drizzle
 *.pdf
 pnpm-lock.yaml
+apps/web/trace-workspace_design*

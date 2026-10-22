@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { InviteRole, WorkspaceRole } from "@trace/shared";
+import type { InviteRole } from "@trace/shared";
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../../db/client";
 import {

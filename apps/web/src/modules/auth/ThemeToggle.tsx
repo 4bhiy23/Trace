@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
-import { flushSync } from "react-dom";
 import { cn } from "@/lib/utils";
 
 export type TransitionVariant =
@@ -150,27 +149,9 @@ export const ThemeToggle = ({
 }: ThemeToggleProps) => {
   const shape = variant ?? "circle";
   const isControlled = theme !== undefined;
-  const [internalIsDark, setInternalIsDark] = useState(true);
+  const [internalIsDark, setInternalIsDark] = useState(false);
   const isDark = isControlled ? theme === "dark" : internalIsDark;
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const isTransitioningRef = useRef(false);
-  const activeAnimRef = useRef<Animation | null>(null);
-
-  const cancelAnim = useCallback(() => {
-    activeAnimRef.current?.cancel();
-    activeAnimRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      cancelAnim();
-      const root = document.documentElement;
-      if (root.dataset.magicuiThemeVt !== "active") return;
-      delete root.dataset.magicuiThemeVt;
-      root.style.removeProperty("--magicui-theme-toggle-vt-duration");
-      root.style.removeProperty("--magicui-theme-vt-clip-from");
-    };
-  }, [cancelAnim]);
 
   useEffect(() => {
     if (isControlled) return;
@@ -209,12 +190,7 @@ export const ThemeToggle = ({
 
   const toggleTheme = useCallback(() => {
     const button = buttonRef.current;
-    if (
-      !button ||
-      isTransitioningRef.current ||
-      document.documentElement.dataset.magicuiThemeVt === "active"
-    )
-      return;
+    if (!button) return;
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
@@ -265,14 +241,8 @@ export const ThemeToggle = ({
         localStorage.setItem("theme", nextIsDark ? "dark" : "light");
         localStorage.setItem("trace-theme", nextIsDark ? "dark" : "light");
       } catch {
-        // Ignore localStorage quota or access errors in restricted environments
+        // Ignore localStorage quota or access errors
       }
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "theme",
-          newValue: nextIsDark ? "dark" : "light",
-        }),
-      );
       window.dispatchEvent(
         new CustomEvent("theme-change", {
           detail: { theme: nextIsDark ? "dark" : "light" },
@@ -290,81 +260,14 @@ export const ThemeToggle = ({
       return;
     }
 
-    const canAnimatePseudo = (() => {
-      try {
-        const test = document.documentElement.animate(
-          { opacity: [1, 1] },
-          { duration: 1, pseudoElement: "::view-transition-new(root)" },
-        );
-        test.cancel();
-        return true;
-      } catch {
-        return false;
-      }
-    })();
-
-    if (!canAnimatePseudo) {
-      try {
-        document.startViewTransition(() => {
-          flushSync(applyTheme);
-        });
-      } catch {
-        applyTheme();
-      }
-      return;
-    }
-
-    cancelAnim();
-
-    const root = document.documentElement;
-    root.dataset.magicuiThemeVt = "active";
-    root.style.setProperty(
-      "--magicui-theme-toggle-vt-duration",
-      `${duration}ms`,
-    );
-    root.style.setProperty("--magicui-theme-vt-clip-from", clipPath[0]);
-
-    let safetyTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const cleanup = () => {
-      if (safetyTimer) {
-        clearTimeout(safetyTimer);
-        safetyTimer = undefined;
-      }
-      isTransitioningRef.current = false;
-      delete root.dataset.magicuiThemeVt;
-      root.style.removeProperty("--magicui-theme-toggle-vt-duration");
-      root.style.removeProperty("--magicui-theme-vt-clip-from");
-      cancelAnim();
-    };
-
-    isTransitioningRef.current = true;
-    safetyTimer = setTimeout(cleanup, duration + 250);
-
-    let transition: ViewTransition | undefined;
     try {
-      transition = document.startViewTransition(() => {
-        flushSync(applyTheme);
+      const transition = document.startViewTransition(() => {
+        applyTheme();
       });
-    } catch {
-      cleanup();
-      applyTheme();
-      return;
-    }
 
-    if (typeof transition?.finished?.finally === "function") {
-      transition.finished.finally(cleanup).catch(() => {
-        cleanup();
-      });
-    } else {
-      cleanup();
-    }
-
-    const ready = transition?.ready;
-    if (ready && typeof ready.then === "function") {
-      ready
+      transition.ready
         .then(() => {
-          const anim = document.documentElement.animate(
+          document.documentElement.animate(
             {
               clipPath,
             },
@@ -375,11 +278,14 @@ export const ThemeToggle = ({
               pseudoElement: "::view-transition-new(root)",
             },
           );
-          activeAnimRef.current = anim;
         })
-        .catch(() => {});
+        .catch(() => {
+          // Transition cancelled or aborted
+        });
+    } catch {
+      applyTheme();
     }
-  }, [shape, fromCenter, duration, isControlled, onThemeChange, cancelAnim]);
+  }, [shape, fromCenter, duration, isControlled, onThemeChange]);
 
   const candyClasses = candy
     ? "relative inline-flex items-center justify-center font-medium leading-none tracking-[0.01em] select-none overflow-hidden cursor-pointer transition-all duration-200 ease-out active:scale-[0.98] active:brightness-95 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-[radial-gradient(120%_80%_at_50%_70%,#3f3f46_0%,#18181b_100%)] text-zinc-100 border border-white/10 shadow-[0px_4px_20px_-6px_rgba(0,0,0,0.4),inset_0px_1px_3px_0px_rgba(255,255,255,0.25),inset_0px_-2px_4px_0px_rgba(0,0,0,0.2)] hover:shadow-[0px_6px_24px_-4px_rgba(0,0,0,0.5),inset_0px_1px_3px_0px_rgba(255,255,255,0.35),inset_0px_-2px_4px_0px_rgba(0,0,0,0.2)] after:absolute after:top-0 after:left-[15%] after:right-[15%] after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent)] after:pointer-events-none"
@@ -408,7 +314,7 @@ export const ThemeToggle = ({
               "h-4 w-4 transition-transform duration-300 hover:rotate-45",
               candy
                 ? "text-zinc-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
-                : "text-[var(--foreground)]",
+                : "text-current",
             )}
           />
         ) : (
@@ -417,7 +323,7 @@ export const ThemeToggle = ({
               "h-4 w-4 transition-transform duration-300 hover:-rotate-12",
               candy
                 ? "text-zinc-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
-                : "text-[var(--foreground)]",
+                : "text-current",
             )}
           />
         )}
