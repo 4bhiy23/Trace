@@ -180,8 +180,11 @@ export function WorkspaceView() {
       if (matched) return matched;
     }
 
-    return workspaces.find((w) => w.isDefault) || workspaces[0];
-  }, [workspaces, workspaceSlugParam, activeWorkspaceId]);
+    return (
+      workspaces.find((w) => w.isDefault && w.ownerId === user?.id) ||
+      workspaces[0]
+    );
+  }, [workspaces, workspaceSlugParam, activeWorkspaceId, user?.id]);
 
   const effectiveWorkspaceId = activeWorkspace?.id || "";
 
@@ -264,7 +267,9 @@ export function WorkspaceView() {
 
       // If the deleted workspace was currently active, switch back to the default workspace
       if (deletedId === activeWorkspaceId) {
-        const fallback = workspaces.find((w) => w.isDefault) || workspaces[0];
+        const fallback =
+          workspaces.find((w) => w.isDefault && w.ownerId === user?.id) ||
+          workspaces[0];
         if (fallback) {
           setActiveWorkspaceId(fallback.id);
           saveActiveWorkspace(fallback);
@@ -273,7 +278,14 @@ export function WorkspaceView() {
       }
       setWorkspaceToDelete(null);
     },
-    [activeWorkspaceId, workspaces, workspaceToDelete, showToast, router],
+    [
+      activeWorkspaceId,
+      workspaces,
+      workspaceToDelete,
+      showToast,
+      router,
+      user?.id,
+    ],
   );
 
   // Keyboard shortcut handler

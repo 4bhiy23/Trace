@@ -52,8 +52,10 @@ export function WorkspaceSidebar({
   const activeWorkspace =
     workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
 
-  const defaultWorkspace = workspaces.find((w) => w.isDefault);
-  const collabWorkspaces = workspaces.filter((w) => !w.isDefault);
+  const defaultWorkspace = workspaces.find(
+    (w) => w.isDefault && w.ownerId === user?.id,
+  );
+  const collabWorkspaces = workspaces.filter((w) => w !== defaultWorkspace);
 
   return (
     <aside className="w-[296px] shrink-0 flex flex-col h-screen border-r-2 border-black bg-[#FAF7F2] dark:bg-[#141416] grid-paper text-black dark:text-white select-none transition-colors duration-200 font-brand-sans">
@@ -176,7 +178,8 @@ export function WorkspaceSidebar({
                 {activeWorkspace?.name || user?.name || "Workspace"}
               </span>
               <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase bg-[#ECE7E0] text-black shrink-0 border border-black/30 rounded-[2px] ml-auto">
-                {activeWorkspace?.isDefault
+                {activeWorkspace?.isDefault &&
+                activeWorkspace.ownerId === user?.id
                   ? "PRIVATE"
                   : activeWorkspace?.role === "owner"
                     ? "OWNER"
