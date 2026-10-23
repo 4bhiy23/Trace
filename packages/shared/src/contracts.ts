@@ -3,6 +3,14 @@ import { z } from "zod";
 export const workspaceRoleSchema = z.enum(["owner", "admin", "member"]);
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 
+export const projectAccessSchema = z.enum([
+  "owner",
+  "admin",
+  "editor",
+  "viewer",
+]);
+export type ProjectAccess = z.infer<typeof projectAccessSchema>;
+
 export const inviteRoleSchema = z.enum(["admin", "member"]);
 export type InviteRole = z.infer<typeof inviteRoleSchema>;
 
@@ -50,6 +58,14 @@ export function canWorkspace(role: WorkspaceRole, action: WorkspaceAction) {
  */
 export function canEditProject(role: WorkspaceRole, hasEditorGrant: boolean) {
   return role === "owner" || role === "admin" || hasEditorGrant;
+}
+
+export function getProjectAccess(
+  role: WorkspaceRole,
+  hasEditorGrant: boolean,
+): ProjectAccess {
+  if (role === "owner" || role === "admin") return role;
+  return hasEditorGrant ? "editor" : "viewer";
 }
 
 export const canvasTypeSchema = z.enum([
@@ -130,8 +146,6 @@ export type WorkspaceInvite = {
   updatedAt: string;
 };
 
-export type ProjectAccess = "editor" | "viewer";
-
 export type Project = {
   id: string;
   workspaceId: string;
@@ -191,6 +205,7 @@ export const apiPaths = {
   inviteAccept: "/api/workspace-invites/:token/accept",
   workspaceProjects: "/api/workspaces/:workspaceId/projects",
   project: "/api/projects/:projectId",
+  projectPermanentDelete: "/api/projects/:projectId/permanent",
   projectEditors: "/api/projects/:projectId/editors",
   projectEditor: "/api/projects/:projectId/editors/:userId",
   canvases: "/api/projects/:projectId/canvases",
@@ -231,6 +246,9 @@ export const apiRoutes = {
   workspaceProjects: (workspaceId: string) =>
     `/api/workspaces/${workspaceId}/projects`,
   project: (projectId: string) => `/api/projects/${projectId}`,
+  /** Builds the path for permanently deleting an archived project. */
+  projectPermanentDelete: (projectId: string) =>
+    `/api/projects/${projectId}/permanent`,
   /** Builds the API path for listing or adding project editors. */
   projectEditors: (projectId: string) => `/api/projects/${projectId}/editors`,
   /** Builds the API path for removing a project editor. */

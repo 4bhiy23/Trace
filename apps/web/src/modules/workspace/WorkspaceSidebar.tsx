@@ -14,8 +14,10 @@ import {
   User,
   Archive,
   Trash2,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthGuard";
+import { useLeaveWorkspace } from "@/features/workspaces/queries/workspace.mutations";
 import { WorkspaceProject, WorkspaceItem } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +33,7 @@ interface WorkspaceSidebarProps {
   onSelectWorkspace: (workspaceId: string) => void;
   onOpenNewWorkspaceModal: () => void;
   onDeleteWorkspace?: (workspace: WorkspaceItem) => void;
+  onLeaveWorkspace: () => void;
 }
 
 export function WorkspaceSidebar({
@@ -45,9 +48,13 @@ export function WorkspaceSidebar({
   onSelectWorkspace,
   onOpenNewWorkspaceModal,
   onDeleteWorkspace,
+  onLeaveWorkspace,
 }: WorkspaceSidebarProps) {
   const { user, signOut } = useAuth();
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
+  const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const leaveWorkspace = useLeaveWorkspace();
 
   const activeWorkspace =
     workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
@@ -56,6 +63,22 @@ export function WorkspaceSidebar({
     (w) => w.isDefault && w.ownerId === user?.id,
   );
   const collabWorkspaces = workspaces.filter((w) => w !== defaultWorkspace);
+  const canLeaveActiveWorkspace =
+    activeWorkspace && activeWorkspace.role !== "owner";
+
+  const handleLeaveWorkspace = async () => {
+    if (!activeWorkspace) return;
+    setLeaveError(null);
+    try {
+      await leaveWorkspace.mutateAsync(activeWorkspace.id);
+      setIsLeaveOpen(false);
+      onLeaveWorkspace();
+    } catch (err: unknown) {
+      setLeaveError(
+        err instanceof Error ? err.message : "Could not leave workspace.",
+      );
+    }
+  };
 
   return (
     <aside className="w-[296px] shrink-0 flex flex-col h-screen border-r-2 border-black bg-[#FAF7F2] dark:bg-[#141416] grid-paper text-black dark:text-white select-none transition-colors duration-200 font-brand-sans">
@@ -302,6 +325,30 @@ export function WorkspaceSidebar({
                   <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
                   <span>Add Workspace</span>
                 </button>
+
+                {canLeaveActiveWorkspace && (
+                  <>
+                    <div className="border-t-[1.5px] border-black/30 dark:border-white/20 my-1.5" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTeamMenuOpen(false);
+                        setLeaveError(null);
+                        setIsLeaveOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-[#A11B1B] hover:bg-[#FFEEEE] border-2 border-transparent hover:border-[#A11B1B] transition-all cursor-pointer rounded-[2px]"
+                    >
+                      <LogOut className="w-3.5 h-3.5 stroke-[2.4]" />
+                      <span>Leave {activeWorkspace.name}</span>
+                    </button>
+                  </>
+                )}
+                {activeWorkspace?.role === "owner" &&
+                  !activeWorkspace.isDefault && (
+                    <p className="px-2.5 pt-2 text-center font-mono text-[10px] text-black/55 dark:text-white/55">
+                      Transfer ownership to leave this workspace.
+                    </p>
+                  )}
               </div>
             </>
           )}
@@ -351,6 +398,33 @@ export function WorkspaceSidebar({
                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white text-black border border-black shadow-[1px_1px_0px_#000000] rounded-[2px]">
                   D
                 </span>
+              </button>
+            )}
+
+            {currentView === "collaborators" ? (
+              <button
+                type="button"
+                onClick={() => onSelectView("collaborators")}
+                className="sb-rough sb-rough-lime w-full flex items-center justify-between px-3 py-2.5 cursor-pointer font-sans text-xs font-bold text-black"
+                style={
+                  { "--sx": "2.5px", "--sy": "2.5px" } as React.CSSProperties
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 stroke-[2.2]" />
+                  <span>Collaborators</span>
+                </div>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSelectView("collaborators")}
+                className="w-full flex items-center px-3 py-2 text-xs transition-all duration-150 cursor-pointer font-sans font-medium text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-[2px]"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 stroke-[2]" />
+                  <span>Collaborators</span>
+                </div>
               </button>
             )}
 
@@ -552,6 +626,68 @@ export function WorkspaceSidebar({
           </div>
         )}
       </div>
+
+      {isLeaveOpen && activeWorkspace && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !leaveWorkspace.isPending && setIsLeaveOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leave-workspace-title"
+            className="relative w-full max-w-md border-2 border-black bg-[#FAF5EC] p-6 pt-10 text-black shadow-[5px_6px_0px_#000]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsLeaveOpen(false)}
+              disabled={leaveWorkspace.isPending}
+              aria-label="Close dialog"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center border-2 border-black bg-white disabled:opacity-50"
+            >
+              <X className="h-4 w-4 stroke-[2.4]" />
+            </button>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#A11B1B]">
+              Leave workspace
+            </p>
+            <h2
+              id="leave-workspace-title"
+              className="mt-1 font-brand-sans text-xl font-bold"
+            >
+              Leave {activeWorkspace.name}?
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-[#524F46]">
+              You will lose access to this workspace and any project-editor
+              grants. You can rejoin only if someone invites you again.
+            </p>
+            {leaveError && (
+              <p className="mt-4 border-2 border-[#A11B1B] bg-[#FFEEEE] p-2 font-mono text-xs text-[#A11B1B]">
+                {leaveError}
+              </p>
+            )}
+            <div className="mt-6 flex justify-end gap-3 border-t border-black/20 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsLeaveOpen(false)}
+                disabled={leaveWorkspace.isPending}
+                className="border-2 border-black bg-white px-3 py-2 font-mono text-xs font-bold uppercase disabled:opacity-50"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleLeaveWorkspace()}
+                disabled={leaveWorkspace.isPending}
+                className="flex items-center gap-2 border-2 border-black bg-[#A11B1B] px-3 py-2 font-mono text-xs font-bold uppercase text-white shadow-[2px_2px_0px_#000] disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4" />
+                {leaveWorkspace.isPending ? "Leaving…" : "Leave workspace"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

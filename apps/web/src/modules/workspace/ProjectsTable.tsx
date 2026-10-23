@@ -6,6 +6,7 @@ import {
   ArrowRight,
   MoreHorizontal,
   Edit3,
+  Archive,
   Trash2,
   FolderOpen,
   Plus,
@@ -21,7 +22,8 @@ interface ProjectsTableProps {
   files: WorkspaceFile[];
   onSelectProject: (projectId: string) => void;
   onRenameProject?: (projectId: string, newName: string) => void;
-  onDeleteProject?: (projectId: string) => void;
+  onArchiveProject?: (projectId: string) => void;
+  onPermanentlyDeleteProject?: (projectId: string) => Promise<void>;
   onOpenNewProjectModal?: () => void;
   isArchived?: boolean;
   currentUserRole?: "owner" | "admin" | "member";
@@ -33,7 +35,8 @@ export function ProjectsTable({
   files,
   onSelectProject,
   onRenameProject,
-  onDeleteProject,
+  onArchiveProject,
+  onPermanentlyDeleteProject,
   onOpenNewProjectModal,
   isArchived = false,
   currentUserRole = "owner",
@@ -44,6 +47,10 @@ export function ProjectsTable({
   const [editingName, setEditingName] = useState("");
   const [managingProject, setManagingProject] =
     useState<WorkspaceProject | null>(null);
+  const [projectToPermanentlyDelete, setProjectToPermanentlyDelete] =
+    useState<WorkspaceProject | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isOwnerOrAdmin =
     currentUserRole === "owner" || currentUserRole === "admin";
@@ -64,6 +71,20 @@ export function ProjectsTable({
     }
     setEditingProjectId(null);
     setEditingName("");
+  };
+
+  const handlePermanentlyDelete = async () => {
+    if (!projectToPermanentlyDelete || !onPermanentlyDeleteProject) return;
+    try {
+      await onPermanentlyDeleteProject(projectToPermanentlyDelete.id);
+      setProjectToPermanentlyDelete(null);
+      setDeleteConfirmation("");
+      setDeleteError(null);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to permanently delete project",
+      );
+    }
   };
 
   return (
@@ -135,7 +156,10 @@ export function ProjectsTable({
                   actualCanvasCount > 0
                     ? actualCanvasCount
                     : project.count || 0;
-                const isEditor = isOwnerOrAdmin || project.access === "editor";
+                const access = project.access || "viewer";
+                const isEditor = ["owner", "admin", "editor"].includes(
+                  access,
+                );
 
                 return (
                   <div
@@ -198,7 +222,7 @@ export function ProjectsTable({
                         {project.archivedAt
                           ? "ARCHIVED"
                           : isEditor
-                            ? "EDITOR"
+                            ? access.toUpperCase()
                             : "VIEWER"}
                       </span>
                     </div>
@@ -290,19 +314,38 @@ export function ProjectsTable({
                               )}
 
                               {isOwnerOrAdmin &&
-                                onDeleteProject &&
+                                onArchiveProject &&
                                 !project.archivedAt && (
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setActiveMenuId(null);
-                                      onDeleteProject(project.id);
+                                      onArchiveProject(project.id);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans"
+                                  >
+                                    <Archive className="w-3.5 h-3.5 stroke-[2]" />
+                                    <span>Archive Project</span>
+                                  </button>
+                                )}
+
+                              {currentUserRole === "owner" &&
+                                onPermanentlyDeleteProject &&
+                                project.archivedAt && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuId(null);
+                                      setProjectToPermanentlyDelete(project);
+                                      setDeleteConfirmation("");
+                                      setDeleteError(null);
                                     }}
                                     className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans"
                                   >
                                     <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-                                    <span>Delete Project</span>
+                                    <span>Delete permanently</span>
                                   </button>
                                 )}
                             </div>
@@ -324,6 +367,48 @@ export function ProjectsTable({
           project={managingProject}
           workspaceId={workspaceId}
         />
+      )}
+      {projectToPermanentlyDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="permanent-delete-title"
+            className="w-full max-w-md border-2 border-black bg-white p-5 shadow-[6px_7px_0_0_#000] dark:bg-[#1c1d20] dark:border-white/50"
+          >
+            <h2 id="permanent-delete-title" className="font-mono text-base font-bold uppercase text-black dark:text-white">
+              Delete permanently?
+            </h2>
+            <p className="mt-3 text-sm text-[#4b4b4b] dark:text-white/70">
+              This will permanently delete <strong className="text-black dark:text-white">{projectToPermanentlyDelete.name}</strong>. Type its name to confirm.
+            </p>
+            <input
+              autoFocus
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              className="mt-4 w-full border-2 border-black bg-white px-3 py-2 font-mono text-sm text-black outline-none focus:bg-[#E9FFA3] dark:border-white/60 dark:bg-black dark:text-white"
+              aria-label="Project name confirmation"
+            />
+            {deleteError && <p className="mt-2 text-xs text-[#E5484D]">{deleteError}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setProjectToPermanentlyDelete(null)}
+                className="border-2 border-black px-3 py-2 font-mono text-xs font-bold uppercase text-black dark:border-white/60 dark:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmation !== projectToPermanentlyDelete.name}
+                onClick={handlePermanentlyDelete}
+                className="border-2 border-black bg-[#E5484D] px-3 py-2 font-mono text-xs font-bold uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

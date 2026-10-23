@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canEditProject, canWorkspace } from "@trace/shared";
+import { canEditProject, canWorkspace, getProjectAccess } from "@trace/shared";
 
 test("workspace and project permissions stay role-scoped", () => {
   assert.equal(canWorkspace("owner", "workspace:delete"), true);
@@ -11,4 +11,8 @@ test("workspace and project permissions stay role-scoped", () => {
   assert.equal(canEditProject("admin", false), true);
   assert.equal(canEditProject("member", false), false);
   assert.equal(canEditProject("member", true), true);
+  assert.equal(getProjectAccess("owner", false), "owner");
+  assert.equal(getProjectAccess("admin", false), "admin");
+  assert.equal(getProjectAccess("member", true), "editor");
+  assert.equal(getProjectAccess("member", false), "viewer");
 });

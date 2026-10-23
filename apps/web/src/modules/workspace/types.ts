@@ -1,6 +1,12 @@
 export type CanvasType = "markdown" | "architecture" | "flow" | "dbml" | "uml";
 export type Role = "owner" | "editor" | "viewer";
-export type AccessPermission = "editor" | "viewer" | "workspace" | "private";
+export type AccessPermission =
+  | "owner"
+  | "admin"
+  | "editor"
+  | "viewer"
+  | "workspace"
+  | "private";
 
 export interface WorkspaceFile {
   id: string;

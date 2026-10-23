@@ -73,6 +73,21 @@ export function useArchiveProject(workspaceId: string) {
   });
 }
 
+export function usePermanentlyDeleteArchivedProject(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => projectApi.permanentlyDelete(projectId),
+    onSuccess: (_data, projectId) => {
+      queryClient.setQueryData<Project[]>(
+        projectKeys.listByWorkspace(workspaceId),
+        (old) => old?.filter((project) => project.id !== projectId) ?? [],
+      );
+      queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) });
+    },
+  });
+}
+
 export function useAddProjectEditor(projectId: string) {
   const queryClient = useQueryClient();
 
