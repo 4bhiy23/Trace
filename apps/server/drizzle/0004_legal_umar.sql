@@ -1,0 +1,1 @@
+ALTER TABLE "canvas" ADD COLUMN "yjs_state" "bytea";

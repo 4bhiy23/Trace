@@ -1,0 +1,340 @@
+.canvas {
+  --canvas-width: 57rem;
+  --canvas-gutter: clamp(0.875rem, 4vw, 2rem);
+  --canvas-paper: #ffffff;
+  --canvas-toolbar: #faf7f2;
+  --canvas-rule: #dad1c5;
+  --ink: #171714;
+  min-height: 100dvh;
+  display: flow-root;
+  color: #171714;
+  font-family: var(--font-brand-sans), sans-serif;
+}
+
+:global(.dark) .canvas {
+  --canvas-paper: #18191c;
+  --canvas-toolbar: #141416;
+  --canvas-rule: #3b3935;
+  --ink: #8f8980;
+  color: #faf7f2;
+}
+
+.toolbar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem 1rem;
+  padding: 0.75rem
+    max(var(--canvas-gutter), calc((100% - var(--canvas-width)) / 2));
+  border-bottom: 2px solid var(--ink);
+  background: var(--canvas-toolbar);
+}
+
+.back,
+.saveError button,
+.notice button {
+  cursor: pointer;
+}
+
+.back,
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.back,
+.status {
+  font-size: 0.8rem;
+}
+
+.back {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: var(--canvas-paper);
+  font-weight: 700;
+}
+
+.back:hover {
+  background: #e9ffa3;
+  color: #171714;
+}
+
+.title {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title svg {
+  flex-shrink: 0;
+}
+
+.status {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.toolbar button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.saveError,
+.notice {
+  margin: 1rem auto;
+  font-size: 0.875rem;
+}
+
+.notice {
+  width: min(calc(100% - 2 * var(--canvas-gutter)), var(--canvas-width));
+}
+
+.saveError {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--canvas-rule);
+  background: var(--canvas-paper);
+}
+
+.saveError button,
+.notice a,
+.notice button {
+  text-decoration: underline;
+}
+
+.saveError button {
+  margin-left: 0.75rem;
+}
+
+.desk {
+  max-width: calc(var(--canvas-width) + 2 * var(--canvas-gutter));
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 2.5rem) var(--canvas-gutter) 3rem;
+}
+
+.notebook {
+  --binding-gutter: clamp(3.75rem, 7vw, 5.5rem);
+}
+
+.sheet {
+  min-height: max(28rem, calc(100dvh - 10rem));
+}
+
+.sheet :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+.sheet :global(.cm-scroller) {
+  font: inherit;
+}
+
+.sheet :global(.cm-content) {
+  min-height: inherit;
+  padding: clamp(1.5rem, 5vw, 3.5rem) clamp(1.25rem, 6vw, 4rem) 5rem
+    var(--binding-gutter);
+  line-height: 1.75;
+  caret-color: currentColor;
+}
+
+@media (max-width: 40rem) {
+  .toolbar {
+    column-gap: 0.625rem;
+  }
+
+  .notebook {
+    --binding-gutter: 1.25rem;
+  }
+
+  .notebook :global(.rings) {
+    display: none;
+  }
+
+  .sheet {
+    min-height: max(24rem, calc(100dvh - 10rem));
+  }
+}
+
+.sheet :global(code),
+.sheet :global(pre) {
+  font-family: var(--font-roboto-mono), ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+
+:global(.dark) .sheet :global(.cm-cursor) {
+  border-left-color: #faf7f2;
+}
+
+.sheet :global(.cm-md-h1),
+.sheet :global(.cm-md-h2),
+.sheet :global(.cm-md-h3),
+.sheet :global(.cm-md-h4),
+.sheet :global(.cm-md-h5),
+.sheet :global(.cm-md-h6) {
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.sheet :global(.cm-md-h1) {
+  font-size: 2.25em;
+}
+.sheet :global(.cm-md-h2) {
+  font-size: 1.75em;
+}
+.sheet :global(.cm-md-h3) {
+  font-size: 1.35em;
+}
+.sheet :global(.cm-md-h4) {
+  font-size: 1.15em;
+}
+.sheet :global(.cm-md-setext-marker) {
+  line-height: 0;
+}
+
+.sheet :global(.cm-md-link),
+.sheet :global(.cm-md-table a) {
+  color: #2d57a5;
+  text-decoration: underline;
+}
+
+:global(.dark) .sheet :global(.cm-md-link),
+:global(.dark) .sheet :global(.cm-md-table a) {
+  color: #a8c5ff;
+}
+
+.sheet :global(.cm-md-checkbox) {
+  accent-color: #506522;
+  margin-inline: 0.125rem 0.35rem;
+  vertical-align: -0.06em;
+}
+
+.sheet :global(.cm-md-block) {
+  margin: 0.5rem 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--canvas-rule);
+  border-radius: 4px;
+}
+
+.sheet :global(.cm-md-edit-source) {
+  display: block;
+  margin: 0 0 0.4rem auto;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sheet :global(.cm-md-block pre),
+.sheet :global(.cm-md-table) {
+  overflow-x: auto;
+}
+
+.sheet :global(.cm-md-block img) {
+  max-width: 100%;
+  margin: auto;
+}
+
+.sheet :global(.cm-md-diagram-error) {
+  margin-bottom: 0.6rem;
+  color: #a8202b;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+:global(.dark) .sheet :global(.cm-md-diagram-error) {
+  color: #ffb3b8;
+}
+
+.sheet :global(.cm-md-table table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet :global(.cm-md-table th),
+.sheet :global(.cm-md-table td) {
+  border: 1px solid var(--canvas-rule);
+  padding: 0.25rem 0.6rem;
+  text-align: left;
+}
+
+.sheet :global(.cm-md-table th) {
+  background: color-mix(in srgb, var(--canvas-rule) 45%, transparent);
+  font-weight: 700;
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.participants {
+  display: flex;
+  align-items: center;
+  padding-inline-start: 0.25rem;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 1.95rem;
+  height: 1.95rem;
+  border: 2px solid var(--canvas-toolbar);
+  border-radius: 50%;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.avatar + .avatar {
+  margin-inline-start: -0.28rem;
+}
+
+.avatar:hover {
+  z-index: 1;
+}
+
+.overflowAvatar {
+  background: var(--canvas-paper);
+  color: inherit;
+  box-shadow: inset 0 0 0 1px var(--canvas-rule);
+}
+
+.sheet :global(.cm-ySelectionCaret > .cm-ySelectionInfo) {
+  top: auto;
+  bottom: 100%;
+  max-inline-size: 10rem;
+  padding: 0.15rem 0.35rem;
+  overflow: hidden;
+  opacity: 1;
+  border-radius: 3px 3px 3px 0;
+  font-family: var(--font-brand-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.sheet :global(.cm-ySelectionCaret > .cm-ySelectionCaretDot) {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .activity:has(.participants) {
+    flex: 1 0 100%;
+    justify-content: space-between;
+  }
+}

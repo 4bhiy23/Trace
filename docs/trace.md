@@ -16,6 +16,10 @@ Owners and admins create projects, manage members, and restore canvas versions.
 Only owners can manage admins, transfer a non-default workspace, or permanently
 delete a non-default workspace.
 
+Workspace owners and admins can rename projects and rename or permanently
+delete canvases in active projects. Renaming a canvas preserves its draft and
+collaboration room. Deleting a canvas closes its room.
+
 ## Initial scope
 
 The first canvas type is Markdown. The application is a pnpm + Turborepo monorepo using TypeScript, React, Express, PostgreSQL, Drizzle, Yjs, and Better Auth.
@@ -25,7 +29,9 @@ The first canvas type is Markdown. The application is a pnpm + Turborepo monorep
 Each canvas has a current draft state. User edits and collaboration updates change that draft state:
 
 - Markdown content changes update the document state.
-- Collaboration uses Yjs to synchronize authorized clients.
+- Markdown collaboration uses Yjs and Hocuspocus over a WebSocket on the Trace API origin. Each canvas has a separate room. Viewers can follow edits live, and only project editors can send draft changes.
+- PostgreSQL stores the Yjs state alongside the Markdown source. Run the Drizzle migrations before starting the upgraded API. Point the web app at the API origin and forward WebSocket upgrades through any reverse proxy.
+- Run one collaboration server instance per database. Live rooms are held in that process.
 - Draft persistence may happen automatically or as part of collaboration recovery.
 - Draft persistence does not create a permanent history version.
 

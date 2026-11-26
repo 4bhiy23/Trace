@@ -368,7 +368,7 @@ html.dark body::before,
 @font-face {
   font-family: "brandSans";
   src: url("/fonts/brandSans.woff2") format("woff2");
-  font-weight: 300 700;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }

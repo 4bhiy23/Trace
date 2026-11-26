@@ -7,6 +7,9 @@ test("workspace and project permissions stay role-scoped", () => {
   assert.equal(canWorkspace("admin", "workspace:delete"), false);
   assert.equal(canWorkspace("admin", "project:create"), true);
   assert.equal(canWorkspace("member", "project:create"), false);
+  assert.equal(canWorkspace("owner", "project:manage"), true);
+  assert.equal(canWorkspace("admin", "project:manage"), true);
+  assert.equal(canWorkspace("member", "project:manage"), false);
   assert.equal(canWorkspace("member", "version:restore"), false);
   assert.equal(canEditProject("admin", false), true);
   assert.equal(canEditProject("member", false), false);

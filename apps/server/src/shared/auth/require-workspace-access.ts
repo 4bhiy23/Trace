@@ -99,70 +99,90 @@ export function requireProjectAccess(
   access: "read" | "edit" | "manage",
 ): RequestHandler {
   return async (request, response, next) => {
-    const currentUser = getCurrentUser(response);
-    const projectId = getUuidParam(request, "projectId");
-    const [result] = await db
-      .select({
-        id: project.id,
-        workspaceId: project.workspaceId,
-        name: project.name,
-        archivedAt: project.archivedAt,
-        createdAt: project.createdAt,
-        updatedAt: project.updatedAt,
-        role: workspaceMember.role,
-        editorId: projectEditor.userId,
-        workspaceName: workspace.name,
-        workspaceOwnerId: workspace.ownerId,
-        workspaceIsDefault: workspace.isDefault,
-        workspaceCreatedAt: workspace.createdAt,
-        workspaceUpdatedAt: workspace.updatedAt,
-      })
-      .from(project)
-      .innerJoin(workspace, eq(workspace.id, project.workspaceId))
-      .innerJoin(
-        workspaceMember,
-        and(
-          eq(workspaceMember.workspaceId, project.workspaceId),
-          eq(workspaceMember.userId, currentUser.id),
-        ),
-      )
-      .leftJoin(
-        projectEditor,
-        and(
-          eq(projectEditor.projectId, project.id),
-          eq(projectEditor.userId, currentUser.id),
-        ),
-      )
-      .where(eq(project.id, projectId));
-
-    const allowed =
-      result &&
-      (access === "read" ||
-        (access === "edit" &&
-          canEditProject(result.role, result.editorId != null)) ||
-        (access === "manage" && canWorkspace(result.role, "project:manage")));
-    if (!allowed) throw new HttpError(404, "NOT_FOUND", "Project not found");
-
-    response.locals.workspace = {
-      id: result.workspaceId,
-      name: result.workspaceName,
-      ownerId: result.workspaceOwnerId,
-      isDefault: result.workspaceIsDefault,
-      role: result.role,
-      createdAt: result.workspaceCreatedAt,
-      updatedAt: result.workspaceUpdatedAt,
-    };
-    response.locals.project = {
-      id: result.id,
-      workspaceId: result.workspaceId,
-      name: result.name,
-      archivedAt: result.archivedAt,
-      createdAt: result.createdAt,
-      updatedAt: result.updatedAt,
-      access: canEditProject(result.role, result.editorId != null)
-        ? "editor"
-        : "viewer",
-    };
+    await authorizeProject(
+      response,
+      getUuidParam(request, "projectId"),
+      access,
+    );
     next();
   };
+}
+
+export async function authorizeProject(
+  response: Response,
+  projectId: string,
+  access: "read" | "edit" | "manage",
+) {
+  const result = await findProjectMembership(
+    getCurrentUser(response).id,
+    projectId,
+  );
+
+  const allowed =
+    result &&
+    (access === "read" ||
+      (access === "edit" &&
+        canEditProject(result.role, result.editorId != null)) ||
+      (access === "manage" && canWorkspace(result.role, "project:manage")));
+  if (!allowed) throw new HttpError(404, "NOT_FOUND", "Project not found");
+
+  response.locals.workspace = {
+    id: result.workspaceId,
+    name: result.workspaceName,
+    ownerId: result.workspaceOwnerId,
+    isDefault: result.workspaceIsDefault,
+    role: result.role,
+    createdAt: result.workspaceCreatedAt,
+    updatedAt: result.workspaceUpdatedAt,
+  };
+  response.locals.project = {
+    id: result.id,
+    workspaceId: result.workspaceId,
+    name: result.name,
+    archivedAt: result.archivedAt,
+    createdAt: result.createdAt,
+    updatedAt: result.updatedAt,
+    access: canEditProject(result.role, result.editorId != null)
+      ? "editor"
+      : "viewer",
+  };
+  return getProjectContext(response);
+}
+
+export async function findProjectMembership(userId: string, projectId: string) {
+  const [result] = await db
+    .select({
+      id: project.id,
+      workspaceId: project.workspaceId,
+      name: project.name,
+      archivedAt: project.archivedAt,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      role: workspaceMember.role,
+      editorId: projectEditor.userId,
+      workspaceName: workspace.name,
+      workspaceOwnerId: workspace.ownerId,
+      workspaceIsDefault: workspace.isDefault,
+      workspaceCreatedAt: workspace.createdAt,
+      workspaceUpdatedAt: workspace.updatedAt,
+    })
+    .from(project)
+    .innerJoin(workspace, eq(workspace.id, project.workspaceId))
+    .innerJoin(
+      workspaceMember,
+      and(
+        eq(workspaceMember.workspaceId, project.workspaceId),
+        eq(workspaceMember.userId, userId),
+      ),
+    )
+    .leftJoin(
+      projectEditor,
+      and(
+        eq(projectEditor.projectId, project.id),
+        eq(projectEditor.userId, userId),
+      ),
+    )
+    .where(eq(project.id, projectId));
+
+  return result;
 }

@@ -11,16 +11,15 @@ import {
   Plus,
   Shield,
 } from "lucide-react";
-import { WorkspaceProject, WorkspaceFile } from "./types";
+import { WorkspaceProject } from "./types";
 import { RoughBox } from "./RoughBox";
 import { cn } from "@/lib/utils";
 import { ProjectPermissionsModal } from "./ProjectPermissionsModal";
 
 interface ProjectsTableProps {
   projects: WorkspaceProject[];
-  files: WorkspaceFile[];
   onSelectProject: (projectId: string) => void;
-  onRenameProject?: (projectId: string, newName: string) => void;
+  onRenameProject?: (projectId: string, currentName: string) => void;
   onDeleteProject?: (projectId: string) => void;
   onOpenNewProjectModal?: () => void;
   isArchived?: boolean;
@@ -30,7 +29,6 @@ interface ProjectsTableProps {
 
 export function ProjectsTable({
   projects,
-  files,
   onSelectProject,
   onRenameProject,
   onDeleteProject,
@@ -40,31 +38,11 @@ export function ProjectsTable({
   workspaceId,
 }: ProjectsTableProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
   const [managingProject, setManagingProject] =
     useState<WorkspaceProject | null>(null);
 
   const isOwnerOrAdmin =
     currentUserRole === "owner" || currentUserRole === "admin";
-
-  const handleStartRename = (
-    e: React.MouseEvent,
-    project: WorkspaceProject,
-  ) => {
-    e.stopPropagation();
-    setEditingProjectId(project.id);
-    setEditingName(project.name);
-    setActiveMenuId(null);
-  };
-
-  const handleFinishRename = (projectId: string) => {
-    if (editingName.trim() && onRenameProject) {
-      onRenameProject(projectId, editingName.trim());
-    }
-    setEditingProjectId(null);
-    setEditingName("");
-  };
 
   return (
     <div className="relative pt-3 pb-8 select-none">
@@ -128,14 +106,12 @@ export function ProjectsTable({
               {projects.map((project, idx) => {
                 const isMenuOpen = activeMenuId === project.id;
                 const isNearBottom = idx >= Math.max(1, projects.length - 2);
-                const actualCanvasCount = files.filter(
-                  (f) => f.projectId === project.id,
-                ).length;
-                const count =
-                  actualCanvasCount > 0
-                    ? actualCanvasCount
-                    : project.count || 0;
-                const isEditor = isOwnerOrAdmin || project.access === "editor";
+                const count = project.count;
+                const accessLevel = isOwnerOrAdmin
+                  ? "ADMIN"
+                  : project.access === "editor"
+                    ? "EDITOR"
+                    : "VIEWER";
 
                 return (
                   <div
@@ -144,38 +120,18 @@ export function ProjectsTable({
                       "group grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 min-h-[68px] sm:min-h-[72px] items-center text-xs border-b border-[#dad1c5] dark:border-white/10 transition-colors duration-100 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]",
                       isMenuOpen ? "z-30 relative" : "relative",
                     )}
-                    onClick={() => {
-                      if (editingProjectId) return;
-                      onSelectProject(project.id);
-                    }}
+                    onClick={() => onSelectProject(project.id)}
                   >
                     <div className="col-span-6 sm:col-span-5 md:col-span-5 lg:col-span-4 flex items-center gap-3.5 min-w-0 pr-2">
                       <div className="shrink-0 w-9 h-9 border rounded-[4px] flex items-center justify-center transition-colors border-black dark:border-white/40 bg-transparent text-black dark:text-white group-hover:bg-[#E9FFA3] group-hover:text-black">
                         <Folder className="w-4 h-4 stroke-[1.8]" />
                       </div>
 
-                      {editingProjectId === project.id ? (
-                        <input
-                          autoFocus
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter")
-                              handleFinishRename(project.id);
-                            if (e.key === "Escape") setEditingProjectId(null);
-                          }}
-                          onBlur={() => handleFinishRename(project.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="px-2 py-1 text-xs font-bold bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white focus:outline-none min-w-0 w-full"
-                        />
-                      ) : (
-                        <div className="min-w-0 flex-1 truncate">
-                          <div className="font-semibold text-sm sm:text-[15px] truncate font-sans text-black dark:text-white group-hover:underline">
-                            {project.name}
-                          </div>
+                      <div className="min-w-0 flex-1 truncate">
+                        <div className="font-semibold text-sm sm:text-[15px] truncate font-sans text-black dark:text-white group-hover:underline">
+                          {project.name}
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     <div className="col-span-2 hidden sm:flex items-center min-w-0">
@@ -190,16 +146,12 @@ export function ProjectsTable({
                           "inline-flex items-center px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-[0.35px] border border-black rounded-[4px] whitespace-nowrap",
                           project.archivedAt
                             ? "bg-[#FED7D7] text-black"
-                            : isEditor
+                            : accessLevel !== "VIEWER"
                               ? "bg-[#E9FFA3] text-black"
                               : "bg-[#ECE7E0] dark:bg-[#282a30] text-black dark:text-white dark:border-white/40",
                         )}
                       >
-                        {project.archivedAt
-                          ? "ARCHIVED"
-                          : isEditor
-                            ? "EDITOR"
-                            : "VIEWER"}
+                        {project.archivedAt ? "ARCHIVED" : accessLevel}
                       </span>
                     </div>
 
@@ -281,11 +233,15 @@ export function ProjectsTable({
                               {isOwnerOrAdmin && onRenameProject && (
                                 <button
                                   type="button"
-                                  onClick={(e) => handleStartRename(e, project)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuId(null);
+                                    onRenameProject(project.id, project.name);
+                                  }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer font-sans"
                                 >
                                   <Edit3 className="w-3.5 h-3.5 stroke-[2]" />
-                                  <span>Rename</span>
+                                  <span>Rename project</span>
                                 </button>
                               )}
 

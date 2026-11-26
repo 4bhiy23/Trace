@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getSessionCookie } from "@/modules/auth/session-cookie";
 
 export function proxy(request: NextRequest) {
-  const sessionToken =
-    request.cookies.get("better-auth.session_token")?.value ||
-    request.cookies.get("__Secure-better-auth.session_token")?.value;
+  const sessionToken = getSessionCookie(request.cookies);
 
   const { pathname } = request.nextUrl;
 
   const isProtectedRoute =
-    pathname.startsWith("/workspace") || pathname.startsWith("/dashboard");
+    pathname.startsWith("/workspace") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/canvas/");
 
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
 
@@ -37,5 +38,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/workspace/:path*", "/dashboard/:path*", "/login", "/signup"],
+  matcher: [
+    "/",
+    "/workspace/:path*",
+    "/dashboard/:path*",
+    "/canvas/:path*",
+    "/login",
+    "/signup",
+  ],
 };

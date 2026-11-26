@@ -1,5 +1,7 @@
 import {
   apiPaths,
+  canvasTypeSchema,
+  umlSubtypeSchema,
   inviteRoleSchema,
   inviteStatusSchema,
   workspaceRoleSchema,
@@ -21,6 +23,11 @@ const securedErrors = {
   "403": errorResponse,
   "404": errorResponse,
   "409": errorResponse,
+};
+const projectNameRequest = {
+  type: "object",
+  required: ["name"],
+  properties: { name: { type: "string", minLength: 1, maxLength: 120 } },
 };
 /**
  * Describes a required JSON request body using a named component schema.
@@ -63,6 +70,7 @@ export const openApiDocument = {
     { name: "Members" },
     { name: "Invitations" },
     { name: "Projects" },
+    { name: "Canvases" },
   ],
   paths: {
     [apiPaths.health]: {
@@ -398,6 +406,98 @@ export const openApiDocument = {
         },
       },
     },
+    [openApiPath(apiPaths.canvases)]: {
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }],
+      get: {
+        tags: ["Canvases"],
+        summary: "List project canvas metadata",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "200": arrayResponse("Canvases", "CanvasSummary"),
+          ...securedErrors,
+        },
+      },
+      post: {
+        tags: ["Canvases"],
+        summary: "Create an empty canvas",
+        description: "Requires project edit access and an active project.",
+        security: [{ cookieAuth: [] }],
+        requestBody: jsonBody("CanvasCreate"),
+        responses: {
+          "201": jsonResponse("Canvas created", "CanvasDetail"),
+          ...securedErrors,
+        },
+      },
+    },
+    [apiPaths.canvasCollaboration]: {
+      get: {
+        tags: ["Canvases"],
+        summary: "Upgrade to a Markdown collaboration WebSocket",
+        description:
+          "Use the Hocuspocus protocol over WebSocket with a Better Auth session cookie and a trusted Origin. The room name is the canvas UUID. Viewers receive a read-only room.",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "101": {
+            description:
+              "WebSocket upgrade accepted; canvas access is checked on room authentication.",
+          },
+          "403": { description: "WebSocket upgrade rejected." },
+        },
+      },
+    },
+    [openApiPath(apiPaths.canvas)]: {
+      parameters: [{ $ref: "#/components/parameters/CanvasId" }],
+      get: {
+        tags: ["Canvases"],
+        summary: "Get a canvas and its current draft",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "200": jsonResponse("Canvas and current draft", "CanvasDetail"),
+          ...securedErrors,
+        },
+      },
+      patch: {
+        tags: ["Canvases"],
+        summary: "Update the canvas draft source",
+        description:
+          "Requires project edit access and an active project. Markdown updates go through the collaboration room. A stale revision or a pending collaborative edit returns 409. Draft edits do not create versions.",
+        security: [{ cookieAuth: [] }],
+        requestBody: jsonBody("CanvasDraftUpdate"),
+        responses: {
+          "200": jsonResponse(
+            "Draft updated with a new revision",
+            "CanvasDetail",
+          ),
+          ...securedErrors,
+        },
+      },
+      delete: {
+        tags: ["Canvases"],
+        summary: "Permanently delete a canvas",
+        description:
+          "Requires a workspace owner or admin and an active project. Closes the canvas collaboration room.",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          "204": { description: "Canvas deleted" },
+          ...securedErrors,
+        },
+      },
+    },
+    [openApiPath(apiPaths.canvasName)]: {
+      parameters: [{ $ref: "#/components/parameters/CanvasId" }],
+      patch: {
+        tags: ["Canvases"],
+        summary: "Rename a canvas",
+        description:
+          "Requires a workspace owner or admin and an active project. Changes only the canvas name and update timestamp.",
+        security: [{ cookieAuth: [] }],
+        requestBody: jsonBody("CanvasRename"),
+        responses: {
+          "200": jsonResponse("Renamed canvas", "CanvasSummary"),
+          ...securedErrors,
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -416,6 +516,12 @@ export const openApiDocument = {
       },
       ProjectId: {
         name: "projectId",
+        in: "path",
+        required: true,
+        schema: { type: "string", format: "uuid" },
+      },
+      CanvasId: {
+        name: "canvasId",
         in: "path",
         required: true,
         schema: { type: "string", format: "uuid" },
@@ -594,15 +700,104 @@ export const openApiDocument = {
           workspaceId: { type: "string", format: "uuid" },
           name: { type: "string" },
           access: { type: "string", enum: ["editor", "viewer"] },
+          canvasCount: { type: "integer", minimum: 0 },
           archivedAt: { type: "string", format: "date-time", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
       },
-      ProjectCreate: {
+      ProjectCreate: projectNameRequest,
+      CanvasIdentity: {
         type: "object",
-        required: ["name"],
-        properties: { name: { type: "string", minLength: 1, maxLength: 120 } },
+        required: ["type"],
+        properties: {
+          type: { type: "string", enum: canvasTypeSchema.options },
+          subtype: {
+            type: "string",
+            enum: [...umlSubtypeSchema.options, null],
+            nullable: true,
+            default: null,
+            description:
+              "Required for UML canvases. Null for other canvas types.",
+          },
+        },
+      },
+      CanvasCreate: {
+        allOf: [ref("ProjectCreate"), ref("CanvasIdentity")],
+      },
+      CanvasRename: {
+        ...projectNameRequest,
+        additionalProperties: false,
+      },
+      CanvasSummary: {
+        allOf: [
+          ref("CanvasIdentity"),
+          {
+            type: "object",
+            required: [
+              "id",
+              "projectId",
+              "name",
+              "subtype",
+              "createdAt",
+              "updatedAt",
+            ],
+            properties: {
+              id: { type: "string", format: "uuid" },
+              projectId: { type: "string", format: "uuid" },
+              name: { type: "string" },
+              createdAt: { type: "string", format: "date-time" },
+              updatedAt: { type: "string", format: "date-time" },
+            },
+          },
+        ],
+      },
+      CanvasDetail: {
+        allOf: [
+          ref("CanvasSummary"),
+          {
+            type: "object",
+            required: ["workspaceId", "access", "revision", "draft"],
+            properties: {
+              workspaceId: { type: "string", format: "uuid" },
+              access: { type: "string", enum: ["editor", "viewer"] },
+              revision: { type: "integer", minimum: 0 },
+              draft: {
+                type: "object",
+                required: ["identity", "layout"],
+                properties: {
+                  identity: ref("CanvasIdentity"),
+                  source: { type: "string" },
+                  model: {},
+                  layout: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "object",
+                      required: ["x", "y"],
+                      properties: {
+                        x: { type: "number" },
+                        y: { type: "number" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+      CanvasDraftUpdate: {
+        type: "object",
+        required: ["source", "revision"],
+        properties: {
+          source: { type: "string" },
+          revision: {
+            type: "integer",
+            minimum: 0,
+            description:
+              "Revision received when opening or last saving the draft.",
+          },
+        },
       },
       ProjectEditorCreate: {
         type: "object",

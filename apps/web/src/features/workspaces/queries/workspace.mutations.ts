@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { projectKeys } from "@/features/projects/queries/project.keys";
 import { workspaceApi } from "../api/workspace.api";
 import { workspaceKeys } from "./workspace.keys";
 import type {
@@ -6,6 +7,7 @@ import type {
   UpdateWorkspaceInput,
   InviteMemberInput,
   UpdateMemberRoleInput,
+  WorkspaceMember,
   TransferWorkspaceInput,
 } from "../types/workspace.types";
 
@@ -103,10 +105,18 @@ export function useUpdateMemberRole(workspaceId: string) {
   return useMutation({
     mutationFn: (input: UpdateMemberRoleInput) =>
       workspaceApi.updateMemberRole(workspaceId, input),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData<WorkspaceMember[]>(
+        workspaceKeys.members(workspaceId),
+        (members) =>
+          members?.map((member) =>
+            member.userId === updated.userId ? updated : member,
+          ),
+      );
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(workspaceId),
       });
+      queryClient.invalidateQueries({ queryKey: projectKeys.details() });
     },
   });
 }

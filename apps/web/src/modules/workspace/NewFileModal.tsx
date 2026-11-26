@@ -2,24 +2,21 @@
 
 import React, { useState } from "react";
 import { X, FileText, Layers, Database, ChevronDown } from "lucide-react";
-import { CanvasType, WorkspaceProject } from "./types";
+import type { CanvasCreateInput, CanvasType } from "@trace/shared";
+import type { WorkspaceProject } from "./types";
 import { SpiralBinding } from "./SpiralBinding";
 import { cn } from "@/lib/utils";
 
 interface NewFileModalProps {
-  isOpen: boolean;
   onClose: () => void;
   projects: WorkspaceProject[];
   defaultProjectId?: string;
-  onCreateFile: (data: {
-    name: string;
-    type: CanvasType;
-    projectId: string;
-  }) => void;
+  onCreateFile: (
+    data: CanvasCreateInput & { projectId: string },
+  ) => Promise<void>;
 }
 
 export function NewFileModal({
-  isOpen,
   onClose,
   projects,
   defaultProjectId,
@@ -31,7 +28,8 @@ export function NewFileModal({
     defaultProjectId || projects[0]?.id || "",
   );
 
-  if (!isOpen) return null;
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState("");
 
   const canvasOptions: {
     type: CanvasType;
@@ -91,23 +89,34 @@ export function NewFileModal({
     },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onCreateFile({
+    if (isCreating || !name.trim() || !selectedProjectId) return;
+    setIsCreating(true);
+    setError("");
+    try {
+      await onCreateFile({
         name: name.trim(),
         type: selectedType,
-        projectId: selectedProjectId || projects[0]?.id || "",
+        projectId: selectedProjectId,
       });
-      setName("Untitled File");
       onClose();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not create the canvas.",
+      );
+      setIsCreating(false);
     }
+  };
+
+  const close = () => {
+    if (!isCreating) onClose();
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in-0 duration-200"
-      onClick={onClose}
+      onClick={close}
     >
       <svg
         width="0"
@@ -278,7 +287,7 @@ export function NewFileModal({
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={close}
                 aria-label="Close dialog"
                 className="modal-rough-btn w-9 h-9 !p-0 flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
               >
@@ -290,8 +299,11 @@ export function NewFileModal({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5">
-                  FILE NAME
+                <label
+                  htmlFor="canvas-name"
+                  className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5"
+                >
+                  CANVAS NAME
                 </label>
                 <div className="modal-rough-card">
                   <div className="w-8 h-8 border-2 border-black bg-white flex items-center justify-center shrink-0 rounded-[2px] shadow-[1px_1px_0px_#000]">
@@ -299,18 +311,23 @@ export function NewFileModal({
                   </div>
                   <input
                     autoFocus
+                    id="canvas-name"
                     type="text"
+                    maxLength={120}
+                    required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Untitled File"
-                    required
                     className="flex-1 bg-transparent font-mono text-xs sm:text-sm font-bold text-black border-none outline-none focus:ring-0 ml-3 placeholder:text-black/40"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5">
+                <label
+                  htmlFor="canvas-project"
+                  className="block font-mono text-xs font-bold uppercase tracking-wider text-[#111] mb-1.5"
+                >
                   TARGET PROJECT
                 </label>
                 <div className="modal-rough-card relative">
@@ -330,6 +347,7 @@ export function NewFileModal({
                   </div>
 
                   <select
+                    id="canvas-project"
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
                     className="flex-1 bg-transparent font-mono text-xs sm:text-sm font-bold text-black border-none outline-none focus:ring-0 ml-3 appearance-none cursor-pointer pr-6"
@@ -401,9 +419,11 @@ export function NewFileModal({
 
                         <button
                           type="button"
+                          disabled={option.type !== "markdown" || isCreating}
+                          aria-pressed={isSelected}
                           onClick={() => setSelectedType(option.type)}
                           className={cn(
-                            "modal-rough-card justify-between",
+                            "modal-rough-card justify-between disabled:cursor-not-allowed disabled:opacity-55",
                             isSelected && "modal-rough-card--selected",
                           )}
                         >
@@ -417,7 +437,9 @@ export function NewFileModal({
                                 {option.label}
                               </div>
                               <div className="font-mono text-[11px] text-[#555] truncate leading-tight mt-0.5">
-                                {option.description}
+                                {option.type === "markdown"
+                                  ? option.description
+                                  : "Coming later"}
                               </div>
                             </div>
                           </div>
@@ -437,10 +459,15 @@ export function NewFileModal({
                 </div>
               </div>
 
+              {error && (
+                <p role="alert" className="text-sm font-semibold text-red-800">
+                  {error}
+                </p>
+              )}
               <div className="pt-3 flex items-center justify-end gap-3.5">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={close}
                   className="modal-rough-btn font-brand-sans font-black text-xs uppercase tracking-wider text-black"
                 >
                   <span>CANCEL</span>
@@ -462,9 +489,10 @@ export function NewFileModal({
 
                 <button
                   type="submit"
+                  disabled={isCreating || !name.trim() || !selectedProjectId}
                   className="modal-rough-btn modal-rough-btn--lime font-brand-sans font-black text-xs uppercase tracking-wider text-black"
                 >
-                  <span>CREATE FILE</span>
+                  <span>{isCreating ? "Creating…" : "Create Canvas"}</span>
 
                   <svg
                     className="absolute right-1 bottom-1 w-3.5 h-3.5 pointer-events-none z-10"

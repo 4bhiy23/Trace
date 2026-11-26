@@ -8,3 +8,14 @@ export const authClient = createAuthClient({
 });
 
 export const { useSession, signIn, signOut, signUp } = authClient;
+
+export async function signOutWithOfflineCleanup(userId: string | undefined) {
+  try {
+    await authClient.signOut();
+  } finally {
+    if (userId) {
+      const { clearOfflineAccount } = await import("../canvas/offline-drafts");
+      await clearOfflineAccount(userId).catch(() => {});
+    }
+  }
+}

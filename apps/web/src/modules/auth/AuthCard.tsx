@@ -30,6 +30,14 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
   const emailId = useId();
   const passwordId = useId();
 
+  function destination() {
+    const callback =
+      new URLSearchParams(window.location.search).get("callbackUrl") ?? "";
+    return /^\/canvas\/[0-9a-f-]{36}$/i.test(callback)
+      ? callback
+      : "/workspace";
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatusMessage(null);
@@ -53,10 +61,10 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
         } else {
           setStatusMessage({
             type: "success",
-            text: "Account created successfully. Redirecting to workspace...",
+            text: "Account created successfully. Redirecting…",
           });
           setTimeout(() => {
-            window.location.href = "/workspace";
+            window.location.href = destination();
           }, 700);
         }
       } else {
@@ -74,10 +82,10 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
         } else {
           setStatusMessage({
             type: "success",
-            text: "Signed in successfully. Redirecting to workspace...",
+            text: "Signed in successfully. Redirecting…",
           });
           setTimeout(() => {
-            window.location.href = "/workspace";
+            window.location.href = destination();
           }, 700);
         }
       }
@@ -98,7 +106,7 @@ export function AuthCard({ initialMode = "sign-up" }: AuthCardProps) {
     try {
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: `${window.location.origin}/workspace`,
+        callbackURL: `${window.location.origin}${destination()}`,
       });
 
       if (error) {

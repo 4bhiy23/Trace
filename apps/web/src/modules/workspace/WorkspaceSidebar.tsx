@@ -25,11 +25,12 @@ interface WorkspaceSidebarProps {
   projects: WorkspaceProject[];
   archivedProjectsCount?: number;
   onOpenNewProjectModal?: () => void;
-  onOpenNewFileModal: () => void;
+  onOpenNewFileModal?: () => void;
   workspaces: WorkspaceItem[];
   activeWorkspaceId: string;
   onSelectWorkspace: (workspaceId: string) => void;
   onOpenNewWorkspaceModal: () => void;
+  onOpenPeople?: () => void;
   onDeleteWorkspace?: (workspace: WorkspaceItem) => void;
 }
 
@@ -44,6 +45,7 @@ export function WorkspaceSidebar({
   activeWorkspaceId,
   onSelectWorkspace,
   onOpenNewWorkspaceModal,
+  onOpenPeople,
   onDeleteWorkspace,
 }: WorkspaceSidebarProps) {
   const { user, signOut } = useAuth();
@@ -308,6 +310,20 @@ export function WorkspaceSidebar({
         </div>
       </div>
 
+      {onOpenPeople && (
+        <div className="px-3.5 pt-1">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={onOpenPeople}
+            className="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-[2px] px-3 text-left text-xs font-medium hover:bg-black/5 focus-visible:outline-2 focus-visible:-outline-offset-2 dark:hover:bg-white/10"
+          >
+            <Users aria-hidden="true" className="size-4 stroke-2" />
+            People
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-6">
         <div>
           <div className="flex items-center gap-2 mb-2.5 px-0.5">
@@ -501,20 +517,22 @@ export function WorkspaceSidebar({
           </svg>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenNewFileModal}
-          className="sb-rough sb-rough-lime w-full h-12 flex items-center justify-center gap-2.5 font-mono font-bold text-xs uppercase tracking-wider text-black cursor-pointer transition-transform hover:-translate-y-0.5"
-          style={
-            {
-              "--sx": "3px",
-              "--sy": "3px",
-            } as React.CSSProperties
-          }
-        >
-          <Send className="w-4 h-4 stroke-[2.6]" />
-          <span>NEW FILE</span>
-        </button>
+        {onOpenNewFileModal && (
+          <button
+            type="button"
+            onClick={onOpenNewFileModal}
+            className="sb-rough sb-rough-lime w-full h-12 flex items-center justify-center gap-2.5 font-mono font-bold text-xs uppercase tracking-wider text-black cursor-pointer transition-transform hover:-translate-y-0.5"
+            style={
+              {
+                "--sx": "3px",
+                "--sy": "3px",
+              } as React.CSSProperties
+            }
+          >
+            <Send className="w-4 h-4 stroke-[2.6]" />
+            <span>NEW CANVAS</span>
+          </button>
+        )}
 
         {/* USER PROFILE CARD */}
         {user && (
