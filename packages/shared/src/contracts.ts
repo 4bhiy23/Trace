@@ -151,6 +151,7 @@ export type Project = {
   workspaceId: string;
   name: string;
   access: ProjectAccess;
+  canvasCount?: number;
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -173,6 +174,13 @@ export type Canvas = {
   draft: CanvasDraft;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CanvasSummary = Omit<Canvas, "draft">;
+export type CanvasDetail = Canvas & {
+  revision: number;
+  workspaceId: string;
+  access: Extract<ProjectAccess, "editor" | "viewer">;
 };
 
 export type CanvasVersion = {
@@ -210,6 +218,8 @@ export const apiPaths = {
   projectEditor: "/api/projects/:projectId/editors/:userId",
   canvases: "/api/projects/:projectId/canvases",
   canvas: "/api/canvases/:canvasId",
+  canvasName: "/api/canvases/:canvasId/name",
+  canvasCollaboration: "/api/collaboration",
   versions: "/api/canvases/:canvasId/versions",
   restore: "/api/canvases/:canvasId/versions/:versionId/restore",
 } as const;
@@ -256,6 +266,8 @@ export const apiRoutes = {
     `/api/projects/${projectId}/editors/${userId}`,
   canvases: (projectId: string) => `/api/projects/${projectId}/canvases`,
   canvas: (canvasId: string) => `/api/canvases/${canvasId}`,
+  canvasName: (canvasId: string) => `${apiRoutes.canvas(canvasId)}/name`,
+  canvasCollaboration: apiPaths.canvasCollaboration,
   versions: (canvasId: string) => `/api/canvases/${canvasId}/versions`,
   restore: (canvasId: string, versionId: string) =>
     `/api/canvases/${canvasId}/versions/${versionId}/restore`,
@@ -293,6 +305,25 @@ export const canvasUpdateSchema = z.object({
   draft: canvasDraftSchema.optional(),
 });
 
+export const canvasRenameSchema = canvasUpdateSchema
+  .pick({ name: true })
+  .required()
+  .strict();
+
+export const canvasDraftUpdateSchema = z.object({
+  source: canvasDraftSchema.shape.source
+    .unwrap()
+    .refine(
+      (source) => !source.includes("\0"),
+      "Markdown cannot contain null characters",
+    ),
+  revision: z.number().int().nonnegative(),
+});
+
+export type CanvasCreateInput = z.input<typeof canvasCreateSchema>;
+export type CanvasRenameInput = z.input<typeof canvasRenameSchema>;
+export type CanvasDraftUpdateInput = z.infer<typeof canvasDraftUpdateSchema>;
+
 export const saveVersionSchema = z.object({
   message: z.string().trim().max(280).optional(),
 });
@@ -319,6 +350,24 @@ export const apiErrorSchema = z.object({
   fields: z.record(z.string(), z.array(z.string())).optional(),
 });
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+export const canvasCollaboration = {
+  text: "markdown",
+  accessDenied: "Canvas access denied",
+  participant: "presence:self:",
+  saved: "draft:saved:",
+  saveFailed: "draft:save-failed",
+  retrySave: "draft:retry-save",
+} as const;
+
+export const canvasParticipantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  access: z.enum(["editor", "viewer"]),
+  color: z.string(),
+  colorLight: z.string(),
+});
+export type CanvasParticipant = z.infer<typeof canvasParticipantSchema>;
 
 export const collaborationEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("sync:start"), canvasId: z.string().uuid() }),

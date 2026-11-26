@@ -6,6 +6,7 @@ import {
 import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import {
+  canvas,
   project,
   projectEditor,
   user,
@@ -55,7 +56,11 @@ export async function listProjects(
   role: WorkspaceRole,
 ) {
   const rows = await db
-    .select({ project, editorId: projectEditor.userId })
+    .select({
+      project,
+      editorId: projectEditor.userId,
+      canvasCount: db.$count(canvas, eq(canvas.projectId, project.id)),
+    })
     .from(project)
     .leftJoin(
       projectEditor,
@@ -67,8 +72,9 @@ export async function listProjects(
     .where(eq(project.workspaceId, workspaceId))
     .orderBy(desc(project.updatedAt));
 
-  return rows.map(({ project: item, editorId }) => ({
+  return rows.map(({ project: item, editorId, canvasCount }) => ({
     ...item,
+    canvasCount,
     access: getProjectAccess(role, editorId != null),
   }));
 }

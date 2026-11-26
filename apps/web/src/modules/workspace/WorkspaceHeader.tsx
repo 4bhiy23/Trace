@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Search, Send } from "lucide-react";
+import { Search } from "lucide-react";
 import { FilterTab } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,6 @@ interface WorkspaceHeaderProps {
   onSelectTab: (tab: FilterTab) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onOpenInviteModal: () => void;
 }
 
 export function WorkspaceHeader({
@@ -18,7 +17,6 @@ export function WorkspaceHeader({
   onSelectTab,
   searchQuery,
   onSearchChange,
-  onOpenInviteModal,
 }: WorkspaceHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,14 +131,6 @@ export function WorkspaceHeader({
           --fill: #e9ffa3 !important;
           --border: #ffffff !important;
         }
-        .hdr-rough-black {
-          --fill: #000000 !important;
-          --border: #000000 !important;
-        }
-        .dark .hdr-rough-black {
-          --fill: #ffffff !important;
-          --border: #ffffff !important;
-        }
         .hdr-rough-circle {
           position: relative;
           isolation: isolate;
@@ -184,33 +174,21 @@ export function WorkspaceHeader({
         })}
       </nav>
 
-      <div className="flex items-center gap-3.5">
-        <div className="hdr-rough relative flex items-center h-8 w-64 sm:w-80 md:w-[340px] px-3 transition-all">
-          <Search className="w-4 h-4 text-black dark:text-white shrink-0 stroke-[2.2] mr-2.5 pointer-events-none" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search canvases..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-transparent border-none outline-none text-xs font-brand-sans text-black dark:text-white placeholder:text-[#888888] dark:placeholder:text-white/40"
-          />
-          <div className="flex items-center ml-1.5 shrink-0">
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#888888] dark:text-white/50 border border-black/25 dark:border-white/30 rounded-[2px] bg-transparent leading-none pointer-events-none">
-              /
-            </kbd>
-          </div>
+      <div className="hdr-rough relative flex items-center h-8 w-64 sm:w-80 md:w-[340px] px-3 transition-all">
+        <Search className="w-4 h-4 text-black dark:text-white shrink-0 stroke-[2.2] mr-2.5 pointer-events-none" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="Search canvases..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full bg-transparent border-none outline-none text-xs font-brand-sans text-black dark:text-white placeholder:text-[#888888] dark:placeholder:text-white/40"
+        />
+        <div className="flex items-center ml-1.5 shrink-0">
+          <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-[#888888] dark:text-white/50 border border-black/25 dark:border-white/30 rounded-[2px] bg-transparent leading-none pointer-events-none">
+            /
+          </kbd>
         </div>
-
-        {/* Invite Button */}
-        <button
-          type="button"
-          onClick={onOpenInviteModal}
-          className="hdr-rough hdr-rough-black h-8 px-4 flex items-center gap-1.5 text-xs font-bold font-sans text-white dark:text-black cursor-pointer select-none transition-transform active:scale-95"
-        >
-          <Send className="w-3.5 h-3.5 text-white dark:text-black stroke-[2.2]" />
-          <span>Invite</span>
-        </button>
       </div>
     </header>
   );

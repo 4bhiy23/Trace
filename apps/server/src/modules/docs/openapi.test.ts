@@ -9,7 +9,7 @@ process.env.BETTER_AUTH_SECRET ??= "test-secret-that-is-at-least-32-characters";
 process.env.BETTER_AUTH_URL ??= "http://localhost:4000";
 process.env.WEB_URL ??= "http://localhost:3000";
 
-test("OpenAPI documents every workspace and project route", async () => {
+test("OpenAPI documents every workspace, project, and canvas route", async () => {
   const { openApiDocument } = await import("./openapi");
   const documentedPaths = openApiDocument.paths as Record<string, unknown>;
   const paths = [
@@ -27,6 +27,10 @@ test("OpenAPI documents every workspace and project route", async () => {
     apiPaths.projectPermanentDelete,
     apiPaths.projectEditors,
     apiPaths.projectEditor,
+    apiPaths.canvases,
+    apiPaths.canvas,
+    apiPaths.canvasName,
+    apiPaths.canvasCollaboration,
   ];
 
   for (const path of paths) {
@@ -34,10 +38,26 @@ test("OpenAPI documents every workspace and project route", async () => {
     assert.ok(documentedPaths[openApiPath], `${openApiPath} is undocumented`);
   }
 
+  for (const [path, method] of [
+    [apiPaths.canvases, "post"],
+    [apiPaths.canvas, "patch"],
+    [apiPaths.canvas, "delete"],
+  ]) {
+    const operations = documentedPaths[
+      path.replace(/:([^/]+)/g, "{$1}")
+    ] as Record<string, unknown>;
+    assert.ok(operations.get);
+    assert.ok(operations[method]);
+  }
+
   const schemas = openApiDocument.components.schemas as Record<
     string,
     { properties?: Record<string, { type?: string }> }
   >;
+  const canvasNameOperations = documentedPaths[
+    apiPaths.canvasName.replace(/:([^/]+)/g, "{$1}")
+  ] as Record<string, unknown>;
+  assert.ok(canvasNameOperations.patch);
   assert.equal(schemas.ApiError.properties?.requestId?.type, "string");
   assert.deepEqual(
     (schemas.Project.properties?.access as { enum?: string[] }).enum,

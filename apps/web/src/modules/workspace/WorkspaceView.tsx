@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Folder,
   MoreHorizontal,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
@@ -21,19 +22,29 @@ import { ShortcutsModal } from "./ShortcutsModal";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { DeleteWorkspaceModal } from "./DeleteWorkspaceModal";
 import { CollaboratorsDirectory } from "./CollaboratorsDirectory";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/modules/auth/AuthGuard";
 import {
-  WorkspaceFile,
   WorkspaceProject,
   WorkspaceItem,
   FilterTab,
   SortField,
   SortDirection,
-  CanvasType,
   AccessPermission,
   ProjectMemberAssignment,
 } from "./types";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { canvasApi, canvasHref } from "@/modules/canvas/canvas-api";
+import { forgetOfflineDraft } from "@/modules/canvas/offline-drafts";
+import {
+  canEditProject,
+  canWorkspace,
+  projectUpdateSchema,
+  type CanvasCreateInput,
+  type CanvasSummary,
+} from "@trace/shared";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { workspaceQueries } from "@/features/workspaces/queries/workspace.options";
 import { projectQueries } from "@/features/projects/queries/project.options";
@@ -50,71 +61,9 @@ import {
   saveActiveWorkspace,
 } from "./workspace-routing";
 
-const INITIAL_DEMO_FILES: WorkspaceFile[] = [
-  {
-    id: "file-roadmap",
-    name: "Product Roadmap",
-    type: "markdown",
-    projectId: "demo",
-    description: "Initial roadmap and milestones",
-    createdAt: "18/10/2026",
-    createdTimestamp: 1729209600000,
-    editedAt: "18/10/2026",
-    editedTimestamp: 1729209600000,
-    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
-  },
-  {
-    id: "file-architecture",
-    name: "System Architecture",
-    type: "uml",
-    projectId: "demo",
-    description: "High level architecture",
-    createdAt: "17/10/2026",
-    createdTimestamp: 1729123200000,
-    editedAt: "17/10/2026",
-    editedTimestamp: 1729123200000,
-    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
-  },
-  {
-    id: "file-research",
-    name: "Research Notes",
-    type: "markdown",
-    projectId: "demo",
-    description: "User research and insights",
-    createdAt: "15/10/2026",
-    createdTimestamp: 1728950400000,
-    editedAt: "16/10/2026",
-    editedTimestamp: 1729036800000,
-    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
-  },
-  {
-    id: "file-design-system",
-    name: "Design System",
-    type: "uml",
-    projectId: "demo",
-    description: "UI components and guidelines",
-    createdAt: "14/10/2026",
-    createdTimestamp: 1728864000000,
-    editedAt: "14/10/2026",
-    editedTimestamp: 1728864000000,
-    author: { name: "Sarthak Gupta", initials: "SG", color: "bg-emerald-600" },
-  },
-];
-
-const isProjectFile = (
-  file: WorkspaceFile,
-  targetProjectId: string,
-  projectName?: string,
-) => {
-  return (
-    file.projectId === targetProjectId ||
-    file.projectId === "demo" ||
-    (file.projectId === "patra" && projectName?.toLowerCase() === "patra")
-  );
-};
-
 export function WorkspaceView() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -127,7 +76,6 @@ export function WorkspaceView() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
     return getSavedWorkspaceId() || "";
   });
-  const [files, setFiles] = useState<WorkspaceFile[]>(INITIAL_DEMO_FILES);
   const [currentView, setCurrentView] = useState<string>("dashboard");
   const [currentTab, setCurrentTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -145,6 +93,12 @@ export function WorkspaceView() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isProjectHeaderMenuOpen, setIsProjectHeaderMenuOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<{
+    kind: "project" | "canvas";
+    id: string;
+    name: string;
+  } | null>(null);
+  const [newName, setNewName] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Live Workspaces Query
@@ -191,13 +145,13 @@ export function WorkspaceView() {
   const effectiveWorkspaceId = activeWorkspace?.id || "";
 
   // Live Projects Query
-  const { data: projectsData = [] } = useQuery(
+  const projectsQuery = useQuery(
     projectQueries.listByWorkspace(effectiveWorkspaceId),
   );
+  const projectsData = projectsQuery.data;
 
   const allProjects: WorkspaceProject[] = useMemo(() => {
-    return projectsData.map((p) => {
-      const pFiles = files.filter((f) => isProjectFile(f, p.id, p.name));
+    return (projectsData ?? []).map((p) => {
       const dateObj = new Date(p.updatedAt);
       const day = String(dateObj.getDate()).padStart(2, "0");
       const month = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -206,7 +160,7 @@ export function WorkspaceView() {
       return {
         id: p.id,
         name: p.name,
-        count: pFiles.length,
+        count: p.canvasCount ?? 0,
         access: p.access,
         archivedAt: p.archivedAt,
         createdAt: formattedDate,
@@ -214,7 +168,7 @@ export function WorkspaceView() {
         updatedTimestamp: dateObj.getTime(),
       };
     });
-  }, [projectsData, files]);
+  }, [projectsData]);
 
   // Active (unarchived) projects only
   const activeProjects = useMemo(() => {
@@ -292,6 +246,15 @@ export function WorkspaceView() {
     ],
   );
 
+  const workspaceRole = activeWorkspace?.role ?? "member";
+  const editableProjects = useMemo(
+    () =>
+      activeProjects.filter((project) =>
+        canEditProject(workspaceRole, project.access === "editor"),
+      ),
+    [activeProjects, workspaceRole],
+  );
+
   // Keyboard shortcut handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -310,7 +273,7 @@ export function WorkspaceView() {
         setCurrentTab("all");
       } else if ((e.ctrlKey || e.metaKey) && (e.key === "n" || e.key === "N")) {
         e.preventDefault();
-        setIsNewFileModalOpen(true);
+        if (editableProjects.length) setIsNewFileModalOpen(true);
       } else if (e.key === "?") {
         e.preventDefault();
         setIsShortcutsModalOpen((prev) => !prev);
@@ -319,7 +282,7 @@ export function WorkspaceView() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [editableProjects.length]);
 
   // Synchronize view state from route segments
   useEffect(() => {
@@ -350,8 +313,7 @@ export function WorkspaceView() {
     }
   }, [sectionParam, projectSlugParam, allProjects]);
 
-  const isOwnerOrAdmin =
-    activeWorkspace?.role === "owner" || activeWorkspace?.role === "admin";
+  const isOwnerOrAdmin = canWorkspace(workspaceRole, "project:manage");
 
   // Active chosen project
   const selectedProject = useMemo(() => {
@@ -372,49 +334,36 @@ export function WorkspaceView() {
   const isArchivedView =
     currentView === "archived" || sectionParam === "archived";
 
-  // Filter and sort files
+  const selectedProjectId = selectedProject?.id ?? "";
+  const canCreateInProject =
+    selectedProject &&
+    !selectedProject.archivedAt &&
+    canEditProject(workspaceRole, selectedProject.access === "editor");
+  const canManageCanvases =
+    selectedProject && !selectedProject.archivedAt && isOwnerOrAdmin;
+  const canvasList = useQuery({
+    queryKey: ["canvases", selectedProjectId],
+    queryFn: () => canvasApi.list(selectedProjectId),
+    enabled: Boolean(selectedProjectId),
+  });
+
   const filteredAndSortedFiles = useMemo(() => {
-    return files
-      .filter((file) => {
-        // Project partition filter
-        if (currentView.startsWith("project:")) {
-          const projectId = currentView.replace("project:", "");
-          return isProjectFile(file, projectId, selectedProject?.name);
-        }
-
-        // Top Filter Tabs
-        if (currentTab === "created-by-me") {
-          return file.author.initials === "SG";
-        }
-        if (currentTab === "recents") {
-          return Date.now() - file.editedTimestamp < 3 * 24 * 60 * 60 * 1000;
-        }
-
-        return true;
-      })
-      .filter((file) => {
-        if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
-        return (
-          file.name.toLowerCase().includes(q) ||
-          file.type.toLowerCase().includes(q) ||
-          file.author.name.toLowerCase().includes(q)
-        );
-      })
+    const query = searchQuery.trim().toLowerCase();
+    return (canvasList.data ?? [])
+      .filter(
+        (file) =>
+          file.name.toLowerCase().includes(query) || file.type.includes(query),
+      )
       .sort((a, b) => {
-        let diff = 0;
-        if (sortField === "name") {
-          diff = a.name.localeCompare(b.name);
-        } else if (sortField === "type") {
-          diff = a.type.localeCompare(b.type);
-        } else if (sortField === "created") {
-          diff = a.createdTimestamp - b.createdTimestamp;
-        } else if (sortField === "edited") {
-          diff = a.editedTimestamp - b.editedTimestamp;
-        }
-        return sortDirection === "asc" ? diff : -diff;
+        const difference = {
+          name: () => a.name.localeCompare(b.name),
+          type: () => a.type.localeCompare(b.type),
+          created: () => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+          edited: () => Date.parse(a.updatedAt) - Date.parse(b.updatedAt),
+        }[sortField]();
+        return sortDirection === "asc" ? difference : -difference;
       });
-  }, [files, currentView, currentTab, searchQuery, sortField, sortDirection]);
+  }, [canvasList.data, searchQuery, sortField, sortDirection]);
 
   // Handlers
   const handleSort = (field: SortField) => {
@@ -474,41 +423,29 @@ export function WorkspaceView() {
     [activeWorkspace, allProjects, router],
   );
 
-  const handleCreateFile = ({
-    name,
-    type,
+  const handleCreateFile = async ({
     projectId,
-  }: {
-    name: string;
-    type: CanvasType;
-    projectId: string;
-  }) => {
-    const targetProjectId =
-      projectId ||
-      (currentView.startsWith("project:")
-        ? currentView.replace("project:", "")
-        : activeProjects[0]?.id || "");
+    ...input
+  }: CanvasCreateInput & { projectId: string }) => {
+    const created = await canvasApi.create(projectId, input);
+    void queryClient.invalidateQueries({ queryKey: ["canvases", projectId] });
+    void queryClient.invalidateQueries(
+      projectQueries.listByWorkspace(effectiveWorkspaceId),
+    );
+    router.push(canvasHref(created.id));
+  };
 
-    const newFile: WorkspaceFile = {
-      id: `file-${Date.now()}`,
-      name,
-      type,
-      projectId: targetProjectId,
-      createdAt: "Just now",
-      createdTimestamp: Date.now(),
-      editedAt: "Just now",
-      editedTimestamp: Date.now(),
-      author: {
-        name: user?.name || user?.email || "User",
-        initials: (user?.name || user?.email || "U").slice(0, 2).toUpperCase(),
-        color: "bg-amber-600",
-      },
-      isPrivate: false,
-      isArchived: false,
-    };
-
-    setFiles((prev) => [newFile, ...prev]);
-    showToast(`Created canvas "${name}"`);
+  const handleCanvasDeleted = (file: CanvasSummary) => {
+    const queryKey = ["canvases", file.projectId];
+    queryClient.setQueryData<CanvasSummary[]>(queryKey, (files) =>
+      files?.filter(({ id }) => id !== file.id),
+    );
+    void queryClient.invalidateQueries({ queryKey });
+    void queryClient.invalidateQueries(
+      projectQueries.listByWorkspace(effectiveWorkspaceId),
+    );
+    if (user?.id) void forgetOfflineDraft(user.id, file.id).catch(() => {});
+    showToast(`Deleted canvas "${file.name}"`);
   };
 
   const handleCreateProject = ({
@@ -519,36 +456,6 @@ export function WorkspaceView() {
     members?: ProjectMemberAssignment[];
   }) => {
     showToast(`Created project "${name}"`);
-  };
-
-  const handleOpenFile = (file: WorkspaceFile) => {
-    showToast(`Opening canvas: ${file.name}`);
-  };
-
-  const handleDeleteFile = (fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
-    showToast("File deleted");
-  };
-
-  const handleDuplicateFile = (file: WorkspaceFile) => {
-    const copy: WorkspaceFile = {
-      ...file,
-      id: `file-${Date.now()}`,
-      name: `${file.name} (Copy)`,
-      createdAt: "Just now",
-      createdTimestamp: Date.now(),
-      editedAt: "Just now",
-      editedTimestamp: Date.now(),
-    };
-    setFiles((prev) => [copy, ...prev]);
-    showToast(`Duplicated "${file.name}"`);
-  };
-
-  const handleRenameFile = (fileId: string, newName: string) => {
-    setFiles((prev) =>
-      prev.map((f) => (f.id === fileId ? { ...f, name: newName } : f)),
-    );
-    showToast(`Renamed to "${newName}"`);
   };
 
   const handleCreateWorkspace = (newWorkspace: WorkspaceItem) => {
@@ -564,25 +471,56 @@ export function WorkspaceView() {
     return targetList.filter((p) => p.name.toLowerCase().includes(q));
   }, [isArchivedView, archivedProjects, activeProjects, searchQuery]);
 
-  const handleRenameProject = async (projectId: string, newName: string) => {
-    try {
-      await updateProjectMutation.mutateAsync({
-        projectId,
-        input: { name: newName },
-      });
-      showToast(`Renamed project to "${newName}"`);
-    } catch (err: unknown) {
-      showToast(
-        err instanceof Error ? err.message : "Failed to rename project",
-      );
-    }
+  const rename = useMutation({
+    mutationFn: async ({
+      kind,
+      id,
+      name,
+    }: NonNullable<typeof renameTarget>) => {
+      if (kind === "project") {
+        await updateProjectMutation.mutateAsync({
+          projectId: id,
+          input: { name },
+        });
+        if (
+          sectionParam === "project" &&
+          id === selectedProjectId &&
+          activeWorkspace
+        ) {
+          router.replace(
+            `/workspace/${toSlug(activeWorkspace.name)}/project/${id}`,
+          );
+        }
+      } else {
+        const updated = await canvasApi.rename(id, { name });
+        const queryKey = ["canvases", updated.projectId];
+        queryClient.setQueryData<CanvasSummary[]>(queryKey, (files) =>
+          files?.map((file) => (file.id === updated.id ? updated : file)),
+        );
+        void queryClient.invalidateQueries({ queryKey });
+      }
+    },
+    onSuccess: (_result, { kind, name }) => {
+      setRenameTarget(null);
+      showToast(`Renamed ${kind} to "${name}"`);
+    },
+  });
+
+  const openRename = (target: NonNullable<typeof renameTarget>) => {
+    rename.reset();
+    setNewName(target.name);
+    setRenameTarget(target);
   };
+  const canRename =
+    isOwnerOrAdmin &&
+    (renameTarget?.kind === "project" ||
+      (renameTarget?.kind === "canvas" && canManageCanvases));
+  const validName = projectUpdateSchema.safeParse({ name: newName });
 
   const handleArchiveProject = async (projectId: string) => {
     const proj = allProjects.find((p) => p.id === projectId);
     try {
       await archiveProjectMutation.mutateAsync(projectId);
-      setFiles((prev) => prev.filter((f) => f.projectId !== projectId));
       if (currentView === `project:${projectId}`) {
         setCurrentView("dashboard");
       }
@@ -598,14 +536,16 @@ export function WorkspaceView() {
     const proj = allProjects.find((p) => p.id === projectId);
     try {
       await permanentlyDeleteProjectMutation.mutateAsync(projectId);
-      setFiles((prev) => prev.filter((file) => file.projectId !== projectId));
+      queryClient.removeQueries({ queryKey: ["canvases", projectId] });
       if (currentView === `project:${projectId}`) {
         setCurrentView("dashboard");
       }
       showToast(`Permanently deleted project "${proj?.name || ""}"`);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Failed to permanently delete project";
+        err instanceof Error
+          ? err.message
+          : "Failed to permanently delete project";
       showToast(message);
       throw err;
     }
@@ -747,11 +687,18 @@ export function WorkspaceView() {
         onOpenNewProjectModal={
           isOwnerOrAdmin ? () => setIsCreateProjectModalOpen(true) : undefined
         }
-        onOpenNewFileModal={() => setIsNewFileModalOpen(true)}
+        onOpenNewFileModal={
+          editableProjects.length
+            ? () => setIsNewFileModalOpen(true)
+            : undefined
+        }
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         onSelectWorkspace={handleSelectWorkspace}
         onOpenNewWorkspaceModal={() => setIsCreateWorkspaceModalOpen(true)}
+        onOpenPeople={
+          effectiveWorkspaceId ? () => setIsInviteModalOpen(true) : undefined
+        }
         onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
         onLeaveWorkspace={() => router.replace("/workspace")}
       />
@@ -764,7 +711,6 @@ export function WorkspaceView() {
           onSelectTab={setCurrentTab}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onOpenInviteModal={() => setIsInviteModalOpen(true)}
         />
 
         {/* Content Body with Technical Grid Paper */}
@@ -779,207 +725,269 @@ export function WorkspaceView() {
               />
             ) : (
               <>
-            {/* Project Header Banner when a project is chosen (§12 & §13) */}
-            {selectedProject && (
-              <div className="relative pt-2 pb-1">
-                <RoughBox
-                  seed={9}
-                  fill="#ffffff"
-                  amp={1.25}
-                  rings="none"
-                  tape="none"
-                  shadow={false}
-                  className="w-full"
-                >
-                  <div className="py-5 px-6 mr-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                      {/* Big Lime Folder Box */}
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[4px] paper-texture-wash">
-                        <Folder className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2]" />
-                      </div>
+                {/* Project Header Banner when a project is chosen (§12 & §13) */}
+                {selectedProject && (
+                  <div className="relative pt-2 pb-1">
+                    <RoughBox
+                      seed={9}
+                      fill="#ffffff"
+                      amp={1.25}
+                      rings="none"
+                      tape="none"
+                      shadow={false}
+                      className="w-full"
+                    >
+                      <div className="py-5 px-6 mr-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          {/* Big Lime Folder Box */}
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[4px] paper-texture-wash">
+                            <Folder className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2]" />
+                          </div>
 
-                      <div className="min-w-0">
-                        <h1 className="font-brand-sans font-bold text-2xl sm:text-3xl text-black tracking-tight truncate">
-                          {selectedProject.name}
-                        </h1>
-                        {selectedProject.description && (
-                          <p className="font-brand-sans text-xs sm:text-sm text-[#636363] mt-0.5 truncate">
-                            {selectedProject.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                          <div className="min-w-0">
+                            <h1 className="font-brand-sans font-bold text-2xl sm:text-3xl text-black tracking-tight truncate">
+                              {selectedProject.name}
+                            </h1>
+                            {selectedProject.description && (
+                              <p className="font-brand-sans text-xs sm:text-sm text-[#636363] mt-0.5 truncate">
+                                {selectedProject.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
-                      {/* 3-dots actions button (Owner & Admin only) */}
-                      {isOwnerOrAdmin && !selectedProject.archivedAt && (
-                        <div className="relative">
+                        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
+                          {isOwnerOrAdmin && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-sm"
+                              onClick={() =>
+                                openRename({
+                                  kind: "project",
+                                  id: selectedProject.id,
+                                  name: selectedProject.name,
+                                })
+                              }
+                            >
+                              <Pencil aria-hidden="true" />
+                              Rename project
+                            </Button>
+                          )}
+                          {/* 3-dots actions button (Owner & Admin only) */}
+                          {isOwnerOrAdmin && !selectedProject.archivedAt && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                aria-label="Project actions"
+                                onClick={() =>
+                                  setIsProjectHeaderMenuOpen(
+                                    !isProjectHeaderMenuOpen,
+                                  )
+                                }
+                                className="paper-btn paper-btn--paper w-9 h-9 text-black flex items-center justify-center cursor-pointer select-none"
+                              >
+                                <MoreHorizontal className="w-4 h-4 stroke-[2.2]" />
+                              </button>
+
+                              {isProjectHeaderMenuOpen && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() =>
+                                      setIsProjectHeaderMenuOpen(false)
+                                    }
+                                  />
+                                  <div
+                                    className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black p-1.5 text-xs animate-in fade-in-50 duration-150 rounded-[2px]"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsProjectHeaderMenuOpen(false);
+                                        handleArchiveProject(
+                                          selectedProject.id,
+                                        );
+                                        handleSelectView("dashboard");
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
+                                      <span>Archive Project</span>
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Back to Projects Button */}
                           <button
                             type="button"
-                            aria-label="Project actions"
-                            onClick={() =>
-                              setIsProjectHeaderMenuOpen(
-                                !isProjectHeaderMenuOpen,
-                              )
-                            }
-                            className="paper-btn paper-btn--paper w-9 h-9 text-black flex items-center justify-center cursor-pointer select-none"
+                            onClick={() => handleSelectView("dashboard")}
+                            className="paper-btn paper-btn--lime px-4 py-2 font-brand-sans font-bold text-xs flex items-center gap-2 cursor-pointer select-none"
                           >
-                            <MoreHorizontal className="w-4 h-4 stroke-[2.2]" />
+                            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                            <span>Back to Projects</span>
                           </button>
-
-                          {isProjectHeaderMenuOpen && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-40"
-                                onClick={() =>
-                                  setIsProjectHeaderMenuOpen(false)
-                                }
-                              />
-                              <div
-                                className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black p-1.5 text-xs animate-in fade-in-50 duration-150 rounded-[2px]"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setIsProjectHeaderMenuOpen(false);
-                                    handleArchiveProject(selectedProject.id);
-                                    handleSelectView("dashboard");
-                                  }}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-                                  <span>Archive Project</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
                         </div>
-                      )}
-
-                      {/* Back to Projects Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectView("dashboard")}
-                        className="paper-btn paper-btn--lime px-4 py-2 font-brand-sans font-bold text-xs flex items-center gap-2 cursor-pointer select-none"
-                      >
-                        <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
-                        <span>Back to Projects</span>
-                      </button>
-                    </div>
-                  </div>
-                </RoughBox>
-              </div>
-            )}
-
-            {/* "Create a Project" Hero Card on Dashboard - Owner & Admin only */}
-            {!selectedProject && !isArchivedView && isOwnerOrAdmin && (
-              <CreateBlankCard
-                title="Create a Project"
-                subtitle="Organize canvases, specs and your work"
-                onClick={() => setIsCreateProjectModalOpen(true)}
-              />
-            )}
-
-            {/* "Create a Blank File" Hero Card on Project Page (§13.2) */}
-            {selectedProject && (
-              <CreateBlankCard
-                title="Create a Blank File"
-                subtitle="Infinite drafting canvas & specs"
-                tag="BLANK CANVAS"
-                punchedHoles={true}
-                onClick={() => setIsNewFileModalOpen(true)}
-              />
-            )}
-
-            {/* Section Header: [01] PROJECT FILES • 4 ITEMS --- sparks */}
-            <div className="py-2">
-              <div className="section-head flex items-center gap-3">
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="px-1.5 py-0.5 bg-[#E9FFA3] text-black border border-black font-mono text-xs font-bold rounded-[2px]">
-                    {selectedProject
-                      ? String(filteredAndSortedFiles.length).padStart(2, "0")
-                      : String(filteredProjects.length).padStart(2, "0")}
-                  </span>
-                  <span className="font-mono font-bold text-xs uppercase tracking-[0.5px] text-black dark:text-white">
-                    {selectedProject
-                      ? `PROJECT FILES • ${filteredAndSortedFiles.length} ${filteredAndSortedFiles.length === 1 ? "ITEM" : "ITEMS"}`
-                      : isArchivedView
-                        ? "ARCHIVED DIRECTORY • SOFT-DELETED PROJECTS"
-                        : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
-                  </span>
-                </div>
-
-                <div className="rule flex-1 border-t-[1.5px] border-dashed border-[#DAD1C5] dark:border-white/20" />
-
-                {!selectedProject && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono font-bold text-xs text-black/80 dark:text-white/80 uppercase tracking-[0.35px]">
-                      {isArchivedView
-                        ? `${String(filteredProjects.length).padStart(2, "0")} / ${String(archivedProjects.length).padStart(2, "0")} ARCHIVED`
-                        : `${String(filteredProjects.length).padStart(2, "0")} / ${String(activeProjects.length).padStart(2, "0")} PROJECTS`}
-                    </span>
+                      </div>
+                    </RoughBox>
                   </div>
                 )}
 
-                {/* 3 Doodle Spark Rays on the Right (§13.3) */}
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="#000"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  className="text-black dark:text-white shrink-0"
-                  aria-hidden="true"
-                >
-                  <line x1="4" y1="4" x2="16" y2="1" />
-                  <line x1="2" y1="10" x2="18" y2="10" />
-                  <line x1="4" y1="16" x2="16" y2="19" />
-                </svg>
-              </div>
-            </div>
+                {/* "Create a Project" Hero Card on Dashboard - Owner & Admin only */}
+                {!selectedProject && !isArchivedView && isOwnerOrAdmin && (
+                  <CreateBlankCard
+                    title="Create a Project"
+                    subtitle="Organize canvases, specs and your work"
+                    onClick={() => setIsCreateProjectModalOpen(true)}
+                  />
+                )}
 
-            {/* If viewing a project, render FilesTable. If on Dashboard, render ProjectsTable */}
-            {selectedProject ? (
-              <FilesTable
-                files={filteredAndSortedFiles}
-                sortField={sortField}
-                sortDirection={sortDirection}
-                onSort={handleSort}
-                onOpenFile={handleOpenFile}
-                onDeleteFile={handleDeleteFile}
-                onDuplicateFile={handleDuplicateFile}
-                onRenameFile={handleRenameFile}
-                onOpenNewFileModal={() => setIsNewFileModalOpen(true)}
-              />
-            ) : (
-              <ProjectsTable
-                projects={filteredProjects}
-                files={files}
-                isArchived={isArchivedView}
-                currentUserRole={activeWorkspace?.role || "member"}
-                onSelectProject={handleSelectProject}
-                onRenameProject={
-                  isOwnerOrAdmin ? handleRenameProject : undefined
-                }
-                onArchiveProject={
-                  isOwnerOrAdmin ? handleArchiveProject : undefined
-                }
-                onPermanentlyDeleteProject={
-                  activeWorkspace?.role === "owner"
-                    ? handlePermanentlyDeleteProject
-                    : undefined
-                }
-                onOpenNewProjectModal={
-                  isOwnerOrAdmin
-                    ? () => setIsCreateProjectModalOpen(true)
-                    : undefined
-                }
-                workspaceId={effectiveWorkspaceId}
-              />
-            )}
+                {/* "Create a Blank File" Hero Card on Project Page (§13.2) */}
+                {canCreateInProject && (
+                  <CreateBlankCard
+                    title="New Canvas"
+                    subtitle="Infinite drafting canvas & specs"
+                    tag="BLANK CANVAS"
+                    punchedHoles={true}
+                    onClick={() => setIsNewFileModalOpen(true)}
+                  />
+                )}
+
+                {/* Section Header: [01] PROJECT FILES • 4 ITEMS --- sparks */}
+                <div className="py-2">
+                  <div className="section-head flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="px-1.5 py-0.5 bg-[#E9FFA3] text-black border border-black font-mono text-xs font-bold rounded-[2px]">
+                        {selectedProject
+                          ? String(filteredAndSortedFiles.length).padStart(
+                              2,
+                              "0",
+                            )
+                          : String(filteredProjects.length).padStart(2, "0")}
+                      </span>
+                      <span className="font-mono font-bold text-xs uppercase tracking-[0.5px] text-black dark:text-white">
+                        {selectedProject
+                          ? `PROJECT FILES • ${filteredAndSortedFiles.length} ${filteredAndSortedFiles.length === 1 ? "ITEM" : "ITEMS"}`
+                          : isArchivedView
+                            ? "ARCHIVED DIRECTORY • SOFT-DELETED PROJECTS"
+                            : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
+                      </span>
+                    </div>
+
+                    <div className="rule flex-1 border-t-[1.5px] border-dashed border-[#DAD1C5] dark:border-white/20" />
+
+                    {!selectedProject && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono font-bold text-xs text-black/80 dark:text-white/80 uppercase tracking-[0.35px]">
+                          {isArchivedView
+                            ? `${String(filteredProjects.length).padStart(2, "0")} / ${String(archivedProjects.length).padStart(2, "0")} ARCHIVED`
+                            : `${String(filteredProjects.length).padStart(2, "0")} / ${String(activeProjects.length).padStart(2, "0")} PROJECTS`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 3 Doodle Spark Rays on the Right (§13.3) */}
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="#000"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className="text-black dark:text-white shrink-0"
+                      aria-hidden="true"
+                    >
+                      <line x1="4" y1="4" x2="16" y2="1" />
+                      <line x1="2" y1="10" x2="18" y2="10" />
+                      <line x1="4" y1="16" x2="16" y2="19" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* If viewing a project, render FilesTable. If on Dashboard, render ProjectsTable */}
+                {selectedProject ? (
+                  canvasList.isPending ? (
+                    <p role="status">Loading canvases…</p>
+                  ) : canvasList.isError ? (
+                    <p role="alert">
+                      Could not load canvases.{" "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => void canvasList.refetch()}
+                      >
+                        Retry
+                      </button>
+                    </p>
+                  ) : (
+                    <FilesTable
+                      key={selectedProjectId}
+                      files={filteredAndSortedFiles}
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      onCanvasDeleted={
+                        canManageCanvases ? handleCanvasDeleted : undefined
+                      }
+                      onRenameCanvas={
+                        canManageCanvases
+                          ? ({ id, name }) =>
+                              openRename({ kind: "canvas", id, name })
+                          : undefined
+                      }
+                      onOpenNewFileModal={
+                        canCreateInProject
+                          ? () => setIsNewFileModalOpen(true)
+                          : undefined
+                      }
+                    />
+                  )
+                ) : effectiveWorkspaceId && projectsQuery.isPending ? (
+                  <p role="status">Loading projects…</p>
+                ) : projectsQuery.isError && !projectsData ? (
+                  <p role="alert">
+                    Could not load projects.{" "}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => void projectsQuery.refetch()}
+                    >
+                      Retry
+                    </button>
+                  </p>
+                ) : (
+                  <ProjectsTable
+                    projects={filteredProjects}
+                    isArchived={isArchivedView}
+                    currentUserRole={activeWorkspace?.role || "member"}
+                    onSelectProject={handleSelectProject}
+                    onRenameProject={
+                      isOwnerOrAdmin
+                        ? (id, name) =>
+                            openRename({ kind: "project", id, name })
+                        : undefined
+                    }
+                    onArchiveProject={
+                      isOwnerOrAdmin ? handleArchiveProject : undefined
+                    }
+                    onPermanentlyDeleteProject={
+                      activeWorkspace?.role === "owner"
+                        ? handlePermanentlyDeleteProject
+                        : undefined
+                    }
+                    onOpenNewProjectModal={
+                      isOwnerOrAdmin
+                        ? () => setIsCreateProjectModalOpen(true)
+                        : undefined
+                    }
+                    workspaceId={effectiveWorkspaceId}
+                  />
+                )}
               </>
             )}
           </div>
@@ -1000,13 +1008,16 @@ export function WorkspaceView() {
       </div>
 
       {/* Modals */}
-      <NewFileModal
-        isOpen={isNewFileModalOpen}
-        onClose={() => setIsNewFileModalOpen(false)}
-        projects={activeProjects}
-        defaultProjectId={selectedProject?.id || activeProjects[0]?.id}
-        onCreateFile={handleCreateFile}
-      />
+      {isNewFileModalOpen && editableProjects.length > 0 && (
+        <NewFileModal
+          onClose={() => setIsNewFileModalOpen(false)}
+          projects={editableProjects}
+          defaultProjectId={
+            canCreateInProject ? selectedProjectId : editableProjects[0].id
+          }
+          onCreateFile={handleCreateFile}
+        />
+      )}
 
       <CreateProjectModal
         isOpen={isCreateProjectModalOpen}
@@ -1028,11 +1039,85 @@ export function WorkspaceView() {
         onDeleted={handleWorkspaceDeleted}
       />
 
+      <Dialog
+        open={Boolean(canRename && renameTarget)}
+        onOpenChange={(open) => {
+          if (!open && !rename.isPending) setRenameTarget(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogTitle>Rename {renameTarget?.kind}</DialogTitle>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (
+                canRename &&
+                renameTarget &&
+                validName.success &&
+                validName.data.name !== renameTarget.name &&
+                !rename.isPending
+              ) {
+                rename.mutate({ ...renameTarget, name: validName.data.name });
+              }
+            }}
+          >
+            <label className="grid gap-1.5 font-medium">
+              New name
+              <Input
+                value={newName}
+                maxLength={
+                  projectUpdateSchema.shape.name.maxLength ?? undefined
+                }
+                onChange={(event) => setNewName(event.target.value)}
+                disabled={rename.isPending}
+                required
+              />
+            </label>
+            {rename.isError && (
+              <p role="alert" className="text-red-700 dark:text-red-300">
+                {rename.error.message}
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={rename.isPending}
+                onClick={() => setRenameTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  !validName.success ||
+                  validName.data.name === renameTarget?.name ||
+                  rename.isPending
+                }
+              >
+                {rename.isPending ? "Saving…" : "Save name"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <InviteModal
+        key={effectiveWorkspaceId}
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         workspaceId={effectiveWorkspaceId}
         workspaceName={activeWorkspace?.name}
+        currentUserId={user?.id}
+        canChangeMemberRoles={canWorkspace(
+          activeWorkspace?.role ?? "member",
+          "admin:manage",
+        )}
+        canInviteMembers={canWorkspace(
+          activeWorkspace?.role ?? "member",
+          "member:invite",
+        )}
       />
 
       <ShortcutsModal

@@ -6,6 +6,8 @@ import express, {
   type Response,
 } from "express";
 import { env } from "./config/env";
+import type { CanvasRooms } from "./modules/canvases/canvas-collaboration";
+import { registerCanvasRoutes } from "./modules/canvases/canvas.routes";
 import { registerAuthRoutes } from "./modules/auth/auth.routes";
 import { registerHealthRoutes } from "./modules/health/health.routes";
 import { registerProjectRoutes } from "./modules/projects/project.routes";
@@ -17,7 +19,7 @@ import { HttpError, sendError } from "./shared/http/errors";
 /**
  * Builds the Express app with API routes, middleware, and centralized error handling.
  */
-export function createApp() {
+export function createApp(rooms: CanvasRooms) {
   const app = express();
 
   if (env.NODE_ENV !== "production") registerDocsRoutes(app);
@@ -27,6 +29,7 @@ export function createApp() {
   app.use(express.json());
   registerWorkspaceRoutes(app);
   registerProjectRoutes(app);
+  registerCanvasRoutes(app, rooms);
   registerHealthRoutes(app);
   app.use(
     (

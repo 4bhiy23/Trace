@@ -37,6 +37,13 @@ export function useUpdateProject(workspaceId?: string) {
     }) => projectApi.update(projectId, input),
     onSuccess: (updated) => {
       if (workspaceId) {
+        queryClient.setQueryData<Project[]>(
+          projectKeys.listByWorkspace(workspaceId),
+          (projects) =>
+            projects?.map((project) =>
+              project.id === updated.id ? { ...project, ...updated } : project,
+            ),
+        );
         queryClient.invalidateQueries({
           queryKey: projectKeys.listByWorkspace(workspaceId),
         });

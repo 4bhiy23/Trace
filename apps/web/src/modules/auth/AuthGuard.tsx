@@ -2,7 +2,12 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { authClient } from "./auth-client";
+import { authClient, signOutWithOfflineCleanup } from "./auth-client";
+import {
+  clearOfflineAccount,
+  getOfflineSession,
+  type OfflineSession,
+} from "../canvas/offline-drafts";
 import { TraceLogo } from "./TraceLogo";
 
 export interface AuthUser {
@@ -24,6 +29,7 @@ interface AuthContextValue {
   session: AuthSession | null;
   isPending: boolean;
   signOut: () => Promise<void>;
+  offlineSessionKey?: string;
 }
 
 const defaultAuthContext: AuthContextValue = {
@@ -50,12 +56,17 @@ export function useAuth() {
 interface AuthGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  offlineSessionKey?: string;
 }
 
-export function AuthGuard({ children, fallback }: AuthGuardProps) {
+export function AuthGuard({
+  children,
+  fallback,
+  offlineSessionKey,
+}: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: sessionData, isPending } = authClient.useSession();
+  const { data: sessionData, isPending, error } = authClient.useSession();
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -66,18 +77,59 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     return () => clearTimeout(timer);
   }, []);
 
+  const [offlineLookup, setOfflineLookup] = useState<{
+    key: string;
+    session?: OfflineSession;
+  }>();
+  const canRecover = Boolean(
+    offlineSessionKey &&
+    ((isPending && timedOut) ||
+      (error && (!error.status || error.status >= 500))),
+  );
+  const lookingUp = canRecover && offlineLookup?.key !== offlineSessionKey;
+  const stored = offlineLookup?.session;
+  const offlineSession =
+    canRecover && !lookingUp && stored && stored.expiresAt > Date.now()
+      ? stored
+      : undefined;
+  const user =
+    sessionData?.user ??
+    (offlineSession && { id: offlineSession.userId, email: "" });
+  const session =
+    sessionData?.session ??
+    (offlineSession && {
+      id: offlineSession.id,
+      userId: offlineSession.userId,
+      expiresAt: new Date(offlineSession.expiresAt),
+    });
+  const waiting = (isPending && !timedOut) || lookingUp;
+
   useEffect(() => {
-    if (!isPending || timedOut) {
-      if (!sessionData?.user) {
-        const callbackUrl = encodeURIComponent(pathname || "/workspace");
-        router.replace(`/login?callbackUrl=${callbackUrl}`);
-      }
+    if (!offlineSessionKey) return;
+    let active = true;
+    void getOfflineSession(offlineSessionKey)
+      .catch(() => undefined)
+      .then((result) => {
+        if (active)
+          setOfflineLookup({ key: offlineSessionKey, session: result });
+      });
+    return () => {
+      active = false;
+    };
+  }, [offlineSessionKey, canRecover]);
+
+  useEffect(() => {
+    if (waiting || user) return;
+    if (!canRecover && stored) {
+      void clearOfflineAccount(stored.userId).catch(() => {});
     }
-  }, [isPending, sessionData, timedOut, router, pathname]);
+    const callbackUrl = encodeURIComponent(pathname || "/workspace");
+    router.replace(`/login?callbackUrl=${callbackUrl}`);
+  }, [waiting, user, canRecover, stored, router, pathname]);
 
   const handleSignOut = async () => {
     try {
-      await authClient.signOut();
+      await signOutWithOfflineCleanup(user?.id);
     } catch (e) {
       console.error("Sign out error", e);
     } finally {
@@ -85,7 +137,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     }
   };
 
-  if ((isPending && !timedOut) || !sessionData?.user) {
+  if (waiting || !user) {
     if (fallback) return <>{fallback}</>;
 
     return (
@@ -114,8 +166,9 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   }
 
   const authValue: AuthContextValue = {
-    user: (sessionData.user as unknown as AuthUser) ?? null,
-    session: (sessionData.session as unknown as AuthSession) ?? null,
+    user,
+    session: session ?? null,
+    offlineSessionKey,
     isPending,
     signOut: handleSignOut,
   };

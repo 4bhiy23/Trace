@@ -1,59 +1,56 @@
 "use client";
 
-import React, { useState } from "react";
+import Link from "next/link";
+import { useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { FileText, ArrowUpRight, Pencil, Plus, Trash2 } from "lucide-react";
+import type { CanvasSummary, CanvasType } from "@trace/shared";
+import { Button } from "@/components/ui/button";
 import {
-  FileText,
-  MoreHorizontal,
-  Trash2,
-  Copy,
-  Edit3,
-  ExternalLink,
-  Plus,
-} from "lucide-react";
-import { WorkspaceFile, CanvasType, SortField, SortDirection } from "./types";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { canvasApi, canvasHref } from "@/modules/canvas/canvas-api";
+import type { SortField, SortDirection } from "./types";
 import { RoughBox } from "./RoughBox";
 import { cn } from "@/lib/utils";
 
 interface FilesTableProps {
-  files: WorkspaceFile[];
+  files: CanvasSummary[];
   sortField: SortField;
   sortDirection: SortDirection;
   onSort: (field: SortField) => void;
-  onOpenFile: (file: WorkspaceFile) => void;
-  onDeleteFile: (fileId: string) => void;
-  onDuplicateFile: (file: WorkspaceFile) => void;
-  onRenameFile: (fileId: string, newName: string) => void;
   onOpenNewFileModal?: () => void;
+  onRenameCanvas?: (file: CanvasSummary) => void;
+  onCanvasDeleted?: (file: CanvasSummary) => void;
 }
 
 export function FilesTable({
   files,
   sortField,
   sortDirection,
-  onOpenFile,
-  onDeleteFile,
-  onDuplicateFile,
-  onRenameFile,
   onSort,
   onOpenNewFileModal,
+  onRenameCanvas,
+  onCanvasDeleted,
 }: FilesTableProps) {
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [editingFileId, setEditingFileId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-
-  const handleStartRename = (file: WorkspaceFile) => {
-    setEditingFileId(file.id);
-    setEditingName(file.name);
-    setActiveMenuId(null);
-  };
-
-  const handleFinishRename = (fileId: string) => {
-    if (editingName.trim()) {
-      onRenameFile(fileId, editingName.trim());
-    }
-    setEditingFileId(null);
-    setEditingName("");
-  };
+  const hasCanvasActions = Boolean(onRenameCanvas || onCanvasDeleted);
+  const nameColumns = hasCanvasActions
+    ? "col-span-6 sm:col-span-4"
+    : "col-span-7 sm:col-span-5";
+  const [canvasToDelete, setCanvasToDelete] = useState<CanvasSummary | null>(
+    null,
+  );
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const deletion = useMutation({
+    mutationFn: (file: CanvasSummary) => canvasApi.remove(file.id),
+    onSuccess: (_result, file) => {
+      onCanvasDeleted?.(file);
+      setCanvasToDelete(null);
+    },
+  });
 
   const renderTypeBadge = (type: CanvasType) => {
     const isMarkdown = type === "markdown";
@@ -110,7 +107,10 @@ export function FilesTable({
           {/* Table Header Row: clean shaded band, no borders */}
           <div className="grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 min-h-[46px] items-center bg-[#ece7e0] dark:bg-[#202227] text-xs sm:text-[13px] font-mono font-bold uppercase tracking-[0.5px] text-black dark:text-white select-none">
             <div
-              className="col-span-5 flex items-center gap-1.5 cursor-pointer hover:underline"
+              className={cn(
+                "flex items-center gap-1.5 cursor-pointer hover:underline",
+                nameColumns,
+              )}
               onClick={() => onSort("name")}
             >
               <span>NAME</span>
@@ -155,7 +155,12 @@ export function FilesTable({
                   : "↓"}
               </span>
             </div>
-            <div className="col-span-1 text-right">
+            <div
+              className={cn(
+                "text-right",
+                hasCanvasActions ? "col-span-2" : "col-span-1",
+              )}
+            >
               <span>ACTION</span>
             </div>
           </div>
@@ -168,7 +173,9 @@ export function FilesTable({
                 No canvases found
               </p>
               <p className="text-xs font-mono mt-1 text-[#636363] dark:text-white/60">
-                Create a canvas to start sketching, writing, or architecting.
+                {onOpenNewFileModal
+                  ? "Create a canvas to start writing."
+                  : "Canvases in this project will appear here."}
               </p>
               {onOpenNewFileModal && (
                 <button
@@ -183,23 +190,25 @@ export function FilesTable({
             </div>
           ) : (
             <div>
-              {files.map((file, index) => {
-                const isMenuOpen = activeMenuId === file.id;
-                const isNearBottom = index >= Math.max(1, files.length - 2);
-
-                return (
-                  <div
-                    key={file.id}
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className="grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 min-h-[68px] sm:min-h-[72px] items-center border-b border-[#dad1c5] dark:border-white/10 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group"
+                >
+                  <Link
+                    href={canvasHref(file.id)}
                     className={cn(
-                      "grid grid-cols-12 gap-2 sm:gap-3 px-3 sm:px-4 min-h-[68px] sm:min-h-[72px] items-center border-b border-[#dad1c5] dark:border-white/10 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group",
-                      isMenuOpen ? "z-30 relative" : "relative",
+                      "grid min-h-[68px] grid-cols-subgrid items-center gap-2 sm:min-h-[72px] sm:gap-3",
+                      hasCanvasActions ? "col-span-10" : "col-span-12",
                     )}
-                    onClick={() => {
-                      if (!editingFileId) onOpenFile(file);
-                    }}
                   >
                     {/* Col 1: NAME (Square Icon + Title + Description) */}
-                    <div className="col-span-5 flex items-center gap-3.5 min-w-0 pr-2">
+                    <div
+                      className={cn(
+                        "flex items-center gap-3.5 min-w-0 pr-2",
+                        nameColumns,
+                      )}
+                    >
                       <div className="w-9 h-9 border border-black dark:border-white/40 rounded-[4px] bg-transparent flex items-center justify-center shrink-0">
                         {file.type === "markdown" ? (
                           <FileText className="w-4 h-4 stroke-[1.8] text-black dark:text-white" />
@@ -210,34 +219,9 @@ export function FilesTable({
                         )}
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        {editingFileId === file.id ? (
-                          <input
-                            autoFocus
-                            type="text"
-                            value={editingName}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onBlur={() => handleFinishRename(file.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter")
-                                handleFinishRename(file.id);
-                              if (e.key === "Escape") setEditingFileId(null);
-                            }}
-                            className="px-2 py-1 bg-white border-2 border-black text-xs text-black outline-none font-sans w-full"
-                          />
-                        ) : (
-                          <>
-                            <div className="font-sans font-bold text-sm text-black dark:text-white leading-tight truncate group-hover:underline">
-                              {file.name}
-                            </div>
-                            <div className="font-sans text-xs text-[#737373] dark:text-white/60 leading-tight mt-0.5 truncate">
-                              {file.description ||
-                                "Workspace canvas and documentation"}
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <span className="min-w-0 truncate font-sans font-bold text-sm text-black dark:text-white group-hover:underline">
+                        {file.name}
+                      </span>
                     </div>
 
                     <div className="col-span-2 flex items-center min-w-0">
@@ -245,99 +229,99 @@ export function FilesTable({
                     </div>
 
                     <div className="col-span-2 hidden sm:flex items-center font-mono text-xs text-[#636363] dark:text-white/70 min-w-0 truncate">
-                      {file.createdAt}
+                      {new Date(file.createdAt).toLocaleDateString("en-GB")}
                     </div>
 
                     <div className="col-span-2 flex items-center font-mono text-xs text-[#636363] dark:text-white/70 min-w-0 truncate">
-                      {file.editedAt}
+                      {new Date(file.updatedAt).toLocaleDateString("en-GB")}
                     </div>
 
-                    {/* Col 5: ACTION */}
-                    <div className="col-span-1 flex items-center justify-end relative">
-                      <button
-                        type="button"
-                        aria-label="File options"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenuId(isMenuOpen ? null : file.id);
-                        }}
-                        className="w-8 h-8 flex items-center justify-center text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer rounded-[4px]"
-                      >
-                        <MoreHorizontal className="w-5 h-5 stroke-[2.2]" />
-                      </button>
-
-                      {/* Popover Action Menu */}
-                      {isMenuOpen && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuId(null);
-                            }}
-                          />
-                          <div
-                            className={cn(
-                              "absolute right-0 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black dark:border-white/30 shadow-[4px_5px_0px_0px_rgba(0,0,0,0.14)] p-1.5 text-xs animate-in fade-in-50 duration-150",
-                              isNearBottom
-                                ? "bottom-full mb-1.5"
-                                : "top-full mt-1.5",
-                            )}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onOpenFile(file);
-                                setActiveMenuId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 font-semibold text-black dark:text-white hover:bg-[#E9FFA3] hover:text-black cursor-pointer font-sans"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 stroke-[2]" />
-                              <span>Open Canvas</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStartRename(file)}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 font-semibold text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer font-sans"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 stroke-[2]" />
-                              <span>Rename</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onDuplicateFile(file);
-                                setActiveMenuId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 font-semibold text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer font-sans"
-                            >
-                              <Copy className="w-3.5 h-3.5 stroke-[2]" />
-                              <span>Duplicate</span>
-                            </button>
-                            <div className="border-t-2 border-black/15 dark:border-white/15 my-1" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onDeleteFile(file.id);
-                                setActiveMenuId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-                              <span>Delete Canvas</span>
-                            </button>
-                          </div>
-                        </>
+                    {!hasCanvasActions && (
+                      <div className="flex justify-end" aria-hidden="true">
+                        <ArrowUpRight className="size-4" />
+                      </div>
+                    )}
+                  </Link>
+                  {hasCanvasActions && (
+                    <div className="col-span-2 flex justify-end">
+                      {onRenameCanvas && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Rename canvas: ${file.name}`}
+                          title="Rename canvas"
+                          className="rounded-sm"
+                          onClick={() => onRenameCanvas(file)}
+                        >
+                          <Pencil aria-hidden="true" />
+                        </Button>
+                      )}
+                      {onCanvasDeleted && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete canvas: ${file.name}`}
+                          title="Delete canvas"
+                          className="justify-self-end rounded-sm text-red-700 dark:text-red-300"
+                          onClick={() => {
+                            deletion.reset();
+                            setCanvasToDelete(file);
+                          }}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </Button>
                       )}
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
       </RoughBox>
+      <Dialog
+        open={Boolean(canvasToDelete) && Boolean(onCanvasDeleted)}
+        onOpenChange={(open) => {
+          if (!open && !deletion.isPending) setCanvasToDelete(null);
+        }}
+      >
+        <DialogContent initialFocus={cancelButton} showCloseButton={false}>
+          <DialogTitle>Delete canvas?</DialogTitle>
+          <DialogDescription className="wrap-anywhere">
+            “{canvasToDelete?.name}” will be permanently deleted from this
+            project. This action cannot be undone.
+          </DialogDescription>
+          {deletion.isError && (
+            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+              {deletion.error.message}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              ref={cancelButton}
+              type="button"
+              variant="outline"
+              disabled={deletion.isPending}
+              onClick={() => setCanvasToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletion.isPending}
+              onClick={() => {
+                if (canvasToDelete && onCanvasDeleted)
+                  deletion.mutate(canvasToDelete);
+              }}
+            >
+              {deletion.isPending ? "Deleting…" : "Delete canvas"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

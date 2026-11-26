@@ -11,7 +11,10 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { authClient } from "@/modules/auth/auth-client";
+import {
+  authClient,
+  signOutWithOfflineCleanup,
+} from "@/modules/auth/auth-client";
 import { useAcceptInvite } from "@/features/workspaces/queries/workspace.mutations";
 import { SpiralBinding } from "./SpiralBinding";
 
@@ -56,7 +59,7 @@ export function JoinWorkspaceView() {
 
   const handleSignOutAndSwitch = async () => {
     try {
-      await authClient.signOut();
+      await signOutWithOfflineCleanup(currentUser?.id);
     } catch {
       // Ignore errors on sign out
     } finally {

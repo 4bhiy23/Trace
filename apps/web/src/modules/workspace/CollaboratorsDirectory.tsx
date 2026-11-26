@@ -9,7 +9,10 @@ import {
   useUpdateMemberRole,
 } from "@/features/workspaces/queries/workspace.mutations";
 import { workspaceQueries } from "@/features/workspaces/queries/workspace.options";
-import type { InviteRole, WorkspaceRole } from "@/features/workspaces/types/workspace.types";
+import type {
+  InviteRole,
+  WorkspaceRole,
+} from "@/features/workspaces/types/workspace.types";
 import { RoughBox } from "./RoughBox";
 
 const roleLabel = (role: "owner" | "admin" | "member") =>
@@ -31,9 +34,9 @@ export function CollaboratorsDirectory({
     role: InviteRole;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [action, setAction] = useState<
-    { userId: string; name: string } | null
-  >(null);
+  const [action, setAction] = useState<{ userId: string; name: string } | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [transferTarget, setTransferTarget] = useState<{
     userId: string;
@@ -69,7 +72,9 @@ export function CollaboratorsDirectory({
       setAction(null);
     } catch (err: unknown) {
       setActionError(
-        err instanceof Error ? err.message : "Could not update workspace access.",
+        err instanceof Error
+          ? err.message
+          : "Could not update workspace access.",
       );
     }
   };
@@ -319,9 +324,7 @@ export function CollaboratorsDirectory({
                 className="flex items-center gap-2 border-2 border-black bg-[#A11B1B] px-3 py-2 font-mono text-xs font-bold uppercase text-white shadow-[2px_2px_0px_#000] disabled:opacity-50"
               >
                 <UserMinus className="h-4 w-4" />
-                {actionPending
-                  ? "Updating…"
-                  : "Remove collaborator"}
+                {actionPending ? "Updating…" : "Remove collaborator"}
               </button>
             </div>
           </div>
