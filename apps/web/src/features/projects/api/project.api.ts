@@ -47,6 +47,12 @@ export const projectApi = {
       method: "DELETE",
     }),
 
+  /** Permanently deletes an already archived project. */
+  permanentlyDelete: (projectId: string) =>
+    apiClient<void>(apiRoutes.projectPermanentDelete(projectId), {
+      method: "DELETE",
+    }),
+
   /**
    * Lists explicit project editors and workspace admins for a project.
    */

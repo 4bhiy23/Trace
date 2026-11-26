@@ -194,7 +194,7 @@ export function CreateWorkspaceModal({
 
       {/* Modal Notebook Wrapper */}
       <div
-        className="relative w-full max-w-[560px] my-6 select-none animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-140 my-6 select-none animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Tan under-sheet stack peeking out on right & bottom */}
@@ -222,7 +222,7 @@ export function CreateWorkspaceModal({
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 {/* Lime Icon Box */}
-                <div className="w-12 h-12 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
+                <div className="w-12 h-12 border-2 border-black bg-brand-lime text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
                   <Layers className="w-6 h-6 stroke-[2.2]" />
                 </div>
 
@@ -261,7 +261,7 @@ export function CreateWorkspaceModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="ws-rough-btn w-9 h-9 !p-0 flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
+                className="ws-rough-btn w-9 h-9 p-0! flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
               >
                 <X className="w-5 h-5 stroke-[2.6] text-black" />
               </button>
@@ -311,7 +311,7 @@ export function CreateWorkspaceModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Default Private Workspace Card */}
                   <div
-                    className="ws-rough-card flex-col items-start !p-3.5 w-full cursor-default"
+                    className="ws-rough-card flex-col items-start p-3.5! w-full cursor-default"
                     style={
                       {
                         "--fill": "#ffffff",
@@ -332,7 +332,7 @@ export function CreateWorkspaceModal({
 
                   {/* Collab Workspace Card */}
                   <div
-                    className="ws-rough-card flex-col items-start !p-3.5 w-full cursor-default"
+                    className="ws-rough-card flex-col items-start p-3.5! w-full cursor-default"
                     style={
                       {
                         "--fill": "#E9FFA3",
@@ -346,7 +346,7 @@ export function CreateWorkspaceModal({
                         <Users className="w-3.5 h-3.5 text-black stroke-[2.2]" />
                         <span>Collab Workspace</span>
                       </div>
-                      <span className="font-mono text-[9px] font-bold uppercase bg-black text-[#E9FFA3] px-1.5 py-0.5 rounded-[2px] tracking-wider">
+                      <span className="font-mono text-[9px] font-bold uppercase bg-black text-brand-lime px-1.5 py-0.5 rounded-xs tracking-wider">
                         NEW
                       </span>
                     </div>

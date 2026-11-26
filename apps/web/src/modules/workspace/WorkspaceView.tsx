@@ -21,6 +21,7 @@ import { InviteModal } from "./InviteModal";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { DeleteWorkspaceModal } from "./DeleteWorkspaceModal";
+import { CollaboratorsDirectory } from "./CollaboratorsDirectory";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { canvasApi, canvasHref } from "@/modules/canvas/canvas-api";
 import { forgetOfflineDraft } from "@/modules/canvas/offline-drafts";
 import {
+  canEditProject,
   canWorkspace,
   projectUpdateSchema,
   type CanvasCreateInput,
@@ -49,6 +51,7 @@ import { projectQueries } from "@/features/projects/queries/project.options";
 import {
   useUpdateProject,
   useArchiveProject,
+  usePermanentlyDeleteArchivedProject,
 } from "@/features/projects/queries/project.mutations";
 import {
   toSlug,
@@ -67,7 +70,7 @@ export function WorkspaceView() {
 
   const slug = (params?.slug as string[] | undefined) || [];
   const workspaceSlugParam = slug[0];
-  const sectionParam = slug[1]; // "project" | "archived"
+  const sectionParam = slug[1]; // "project" | "archived" | "collaborators"
   const projectSlugParam = slug[2]; // e.g. "asdfg"
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
@@ -179,6 +182,8 @@ export function WorkspaceView() {
 
   const updateProjectMutation = useUpdateProject(effectiveWorkspaceId);
   const archiveProjectMutation = useArchiveProject(effectiveWorkspaceId);
+  const permanentlyDeleteProjectMutation =
+    usePermanentlyDeleteArchivedProject(effectiveWorkspaceId);
 
   // Sync active workspace ID and maintain URL when on /workspace or /dashboard
   useEffect(() => {
@@ -241,9 +246,13 @@ export function WorkspaceView() {
     ],
   );
 
+  const workspaceRole = activeWorkspace?.role ?? "member";
   const editableProjects = useMemo(
-    () => activeProjects.filter((project) => project.access === "editor"),
-    [activeProjects],
+    () =>
+      activeProjects.filter((project) =>
+        canEditProject(workspaceRole, project.access === "editor"),
+      ),
+    [activeProjects, workspaceRole],
   );
 
   // Keyboard shortcut handler
@@ -277,6 +286,11 @@ export function WorkspaceView() {
 
   // Synchronize view state from route segments
   useEffect(() => {
+    if (sectionParam === "collaborators") {
+      setCurrentView("collaborators");
+      return;
+    }
+
     if (sectionParam === "archived") {
       setCurrentView("archived");
       return;
@@ -299,10 +313,7 @@ export function WorkspaceView() {
     }
   }, [sectionParam, projectSlugParam, allProjects]);
 
-  const isOwnerOrAdmin = canWorkspace(
-    activeWorkspace?.role ?? "member",
-    "project:manage",
-  );
+  const isOwnerOrAdmin = canWorkspace(workspaceRole, "project:manage");
 
   // Active chosen project
   const selectedProject = useMemo(() => {
@@ -325,7 +336,9 @@ export function WorkspaceView() {
 
   const selectedProjectId = selectedProject?.id ?? "";
   const canCreateInProject =
-    selectedProject?.access === "editor" && !selectedProject.archivedAt;
+    selectedProject &&
+    !selectedProject.archivedAt &&
+    canEditProject(workspaceRole, selectedProject.access === "editor");
   const canManageCanvases =
     selectedProject && !selectedProject.archivedAt && isOwnerOrAdmin;
   const canvasList = useQuery({
@@ -382,6 +395,8 @@ export function WorkspaceView() {
 
       if (view === "dashboard") {
         router.push(`/workspace/${wsSlug}`);
+      } else if (view === "collaborators") {
+        router.push(`/workspace/${wsSlug}/collaborators`);
       } else if (view === "project") {
         router.push(`/workspace/${wsSlug}/project`);
       } else if (view === "archived") {
@@ -502,7 +517,7 @@ export function WorkspaceView() {
       (renameTarget?.kind === "canvas" && canManageCanvases));
   const validName = projectUpdateSchema.safeParse({ name: newName });
 
-  const handleDeleteProject = async (projectId: string) => {
+  const handleArchiveProject = async (projectId: string) => {
     const proj = allProjects.find((p) => p.id === projectId);
     try {
       await archiveProjectMutation.mutateAsync(projectId);
@@ -512,8 +527,27 @@ export function WorkspaceView() {
       showToast(`Archived project "${proj?.name || ""}"`);
     } catch (err: unknown) {
       showToast(
-        err instanceof Error ? err.message : "Failed to delete project",
+        err instanceof Error ? err.message : "Failed to archive project",
       );
+    }
+  };
+
+  const handlePermanentlyDeleteProject = async (projectId: string) => {
+    const proj = allProjects.find((p) => p.id === projectId);
+    try {
+      await permanentlyDeleteProjectMutation.mutateAsync(projectId);
+      queryClient.removeQueries({ queryKey: ["canvases", projectId] });
+      if (currentView === `project:${projectId}`) {
+        setCurrentView("dashboard");
+      }
+      showToast(`Permanently deleted project "${proj?.name || ""}"`);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to permanently delete project";
+      showToast(message);
+      throw err;
     }
   };
 
@@ -666,6 +700,7 @@ export function WorkspaceView() {
           effectiveWorkspaceId ? () => setIsInviteModalOpen(true) : undefined
         }
         onDeleteWorkspace={(ws) => setWorkspaceToDelete(ws)}
+        onLeaveWorkspace={() => router.replace("/workspace")}
       />
 
       {/* Main Content Area */}
@@ -681,257 +716,279 @@ export function WorkspaceView() {
         {/* Content Body with Technical Grid Paper */}
         <main className="grid-paper relative min-h-0 flex-1 overflow-y-auto p-6 md:p-8 animate-in fade-in-0 duration-200 ease-out">
           <div className="max-w-6xl mx-auto space-y-6 pb-20">
-            {/* Project Header Banner when a project is chosen (§12 & §13) */}
-            {selectedProject && (
-              <div className="relative pt-2 pb-1">
-                <RoughBox
-                  seed={9}
-                  fill="#ffffff"
-                  amp={1.25}
-                  rings="none"
-                  tape="none"
-                  shadow={false}
-                  className="w-full"
-                >
-                  <div className="py-5 px-6 mr-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                      {/* Big Lime Folder Box */}
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[4px] paper-texture-wash">
-                        <Folder className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2]" />
-                      </div>
+            {currentView === "collaborators" ? (
+              <CollaboratorsDirectory
+                workspaceId={effectiveWorkspaceId}
+                workspaceName={activeWorkspace?.name}
+                workspaceRole={activeWorkspace?.role}
+                isDefaultWorkspace={activeWorkspace?.isDefault}
+              />
+            ) : (
+              <>
+                {/* Project Header Banner when a project is chosen (§12 & §13) */}
+                {selectedProject && (
+                  <div className="relative pt-2 pb-1">
+                    <RoughBox
+                      seed={9}
+                      fill="#ffffff"
+                      amp={1.25}
+                      rings="none"
+                      tape="none"
+                      shadow={false}
+                      className="w-full"
+                    >
+                      <div className="py-5 px-6 mr-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          {/* Big Lime Folder Box */}
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[4px] paper-texture-wash">
+                            <Folder className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.2]" />
+                          </div>
 
-                      <div className="min-w-0">
-                        <h1 className="font-brand-sans font-bold text-2xl sm:text-3xl text-black tracking-tight truncate">
-                          {selectedProject.name}
-                        </h1>
-                        {selectedProject.description && (
-                          <p className="font-brand-sans text-xs sm:text-sm text-[#636363] mt-0.5 truncate">
-                            {selectedProject.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                          <div className="min-w-0">
+                            <h1 className="font-brand-sans font-bold text-2xl sm:text-3xl text-black tracking-tight truncate">
+                              {selectedProject.name}
+                            </h1>
+                            {selectedProject.description && (
+                              <p className="font-brand-sans text-xs sm:text-sm text-[#636363] mt-0.5 truncate">
+                                {selectedProject.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
-                      {isOwnerOrAdmin && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-sm"
-                          onClick={() =>
-                            openRename({
-                              kind: "project",
-                              id: selectedProject.id,
-                              name: selectedProject.name,
-                            })
-                          }
-                        >
-                          <Pencil aria-hidden="true" />
-                          Rename project
-                        </Button>
-                      )}
-                      {/* 3-dots actions button (Owner & Admin only) */}
-                      {isOwnerOrAdmin && (
-                        <div className="relative">
+                        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
+                          {isOwnerOrAdmin && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-sm"
+                              onClick={() =>
+                                openRename({
+                                  kind: "project",
+                                  id: selectedProject.id,
+                                  name: selectedProject.name,
+                                })
+                              }
+                            >
+                              <Pencil aria-hidden="true" />
+                              Rename project
+                            </Button>
+                          )}
+                          {/* 3-dots actions button (Owner & Admin only) */}
+                          {isOwnerOrAdmin && !selectedProject.archivedAt && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                aria-label="Project actions"
+                                onClick={() =>
+                                  setIsProjectHeaderMenuOpen(
+                                    !isProjectHeaderMenuOpen,
+                                  )
+                                }
+                                className="paper-btn paper-btn--paper w-9 h-9 text-black flex items-center justify-center cursor-pointer select-none"
+                              >
+                                <MoreHorizontal className="w-4 h-4 stroke-[2.2]" />
+                              </button>
+
+                              {isProjectHeaderMenuOpen && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() =>
+                                      setIsProjectHeaderMenuOpen(false)
+                                    }
+                                  />
+                                  <div
+                                    className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black p-1.5 text-xs animate-in fade-in-50 duration-150 rounded-[2px]"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsProjectHeaderMenuOpen(false);
+                                        handleArchiveProject(
+                                          selectedProject.id,
+                                        );
+                                        handleSelectView("dashboard");
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
+                                      <span>Archive Project</span>
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Back to Projects Button */}
                           <button
                             type="button"
-                            aria-label="Project actions"
-                            onClick={() =>
-                              setIsProjectHeaderMenuOpen(
-                                !isProjectHeaderMenuOpen,
-                              )
-                            }
-                            className="paper-btn paper-btn--paper w-9 h-9 text-black flex items-center justify-center cursor-pointer select-none"
+                            onClick={() => handleSelectView("dashboard")}
+                            className="paper-btn paper-btn--lime px-4 py-2 font-brand-sans font-bold text-xs flex items-center gap-2 cursor-pointer select-none"
                           >
-                            <MoreHorizontal className="w-4 h-4 stroke-[2.2]" />
+                            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                            <span>Back to Projects</span>
                           </button>
-
-                          {isProjectHeaderMenuOpen && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-40"
-                                onClick={() =>
-                                  setIsProjectHeaderMenuOpen(false)
-                                }
-                              />
-                              <div
-                                className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white dark:bg-[#18191c] border-2 border-black p-1.5 text-xs animate-in fade-in-50 duration-150 rounded-[2px]"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setIsProjectHeaderMenuOpen(false);
-                                    handleDeleteProject(selectedProject.id);
-                                    handleSelectView("dashboard");
-                                  }}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left font-semibold text-[#E5484D] hover:bg-[#E5484D]/10 cursor-pointer font-sans rounded-[2px]"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
-                                  <span>Delete Project</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
                         </div>
-                      )}
-
-                      {/* Back to Projects Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectView("dashboard")}
-                        className="paper-btn paper-btn--lime px-4 py-2 font-brand-sans font-bold text-xs flex items-center gap-2 cursor-pointer select-none"
-                      >
-                        <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
-                        <span>Back to Projects</span>
-                      </button>
-                    </div>
-                  </div>
-                </RoughBox>
-              </div>
-            )}
-
-            {/* "Create a Project" Hero Card on Dashboard - Owner & Admin only */}
-            {!selectedProject && !isArchivedView && isOwnerOrAdmin && (
-              <CreateBlankCard
-                title="Create a Project"
-                subtitle="Organize canvases, specs and your work"
-                onClick={() => setIsCreateProjectModalOpen(true)}
-              />
-            )}
-
-            {/* "Create a Blank File" Hero Card on Project Page (§13.2) */}
-            {canCreateInProject && (
-              <CreateBlankCard
-                title="New Canvas"
-                subtitle="Infinite drafting canvas & specs"
-                tag="BLANK CANVAS"
-                punchedHoles={true}
-                onClick={() => setIsNewFileModalOpen(true)}
-              />
-            )}
-
-            {/* Section Header: [01] PROJECT FILES • 4 ITEMS --- sparks */}
-            <div className="py-2">
-              <div className="section-head flex items-center gap-3">
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="px-1.5 py-0.5 bg-[#E9FFA3] text-black border border-black font-mono text-xs font-bold rounded-[2px]">
-                    {selectedProject
-                      ? String(filteredAndSortedFiles.length).padStart(2, "0")
-                      : String(filteredProjects.length).padStart(2, "0")}
-                  </span>
-                  <span className="font-mono font-bold text-xs uppercase tracking-[0.5px] text-black dark:text-white">
-                    {selectedProject
-                      ? `PROJECT FILES • ${filteredAndSortedFiles.length} ${filteredAndSortedFiles.length === 1 ? "ITEM" : "ITEMS"}`
-                      : isArchivedView
-                        ? "ARCHIVED DIRECTORY • SOFT-DELETED PROJECTS"
-                        : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
-                  </span>
-                </div>
-
-                <div className="rule flex-1 border-t-[1.5px] border-dashed border-[#DAD1C5] dark:border-white/20" />
-
-                {!selectedProject && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono font-bold text-xs text-black/80 dark:text-white/80 uppercase tracking-[0.35px]">
-                      {isArchivedView
-                        ? `${String(filteredProjects.length).padStart(2, "0")} / ${String(archivedProjects.length).padStart(2, "0")} ARCHIVED`
-                        : `${String(filteredProjects.length).padStart(2, "0")} / ${String(activeProjects.length).padStart(2, "0")} PROJECTS`}
-                    </span>
+                      </div>
+                    </RoughBox>
                   </div>
                 )}
 
-                {/* 3 Doodle Spark Rays on the Right (§13.3) */}
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="#000"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  className="text-black dark:text-white shrink-0"
-                  aria-hidden="true"
-                >
-                  <line x1="4" y1="4" x2="16" y2="1" />
-                  <line x1="2" y1="10" x2="18" y2="10" />
-                  <line x1="4" y1="16" x2="16" y2="19" />
-                </svg>
-              </div>
-            </div>
+                {/* "Create a Project" Hero Card on Dashboard - Owner & Admin only */}
+                {!selectedProject && !isArchivedView && isOwnerOrAdmin && (
+                  <CreateBlankCard
+                    title="Create a Project"
+                    subtitle="Organize canvases, specs and your work"
+                    onClick={() => setIsCreateProjectModalOpen(true)}
+                  />
+                )}
 
-            {/* If viewing a project, render FilesTable. If on Dashboard, render ProjectsTable */}
-            {selectedProject ? (
-              canvasList.isPending ? (
-                <p role="status">Loading canvases…</p>
-              ) : canvasList.isError ? (
-                <p role="alert">
-                  Could not load canvases.{" "}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() => void canvasList.refetch()}
-                  >
-                    Retry
-                  </button>
-                </p>
-              ) : (
-                <FilesTable
-                  key={selectedProjectId}
-                  files={filteredAndSortedFiles}
-                  sortField={sortField}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                  onCanvasDeleted={
-                    canManageCanvases ? handleCanvasDeleted : undefined
-                  }
-                  onRenameCanvas={
-                    canManageCanvases
-                      ? ({ id, name }) =>
-                          openRename({ kind: "canvas", id, name })
-                      : undefined
-                  }
-                  onOpenNewFileModal={
-                    canCreateInProject
-                      ? () => setIsNewFileModalOpen(true)
-                      : undefined
-                  }
-                />
-              )
-            ) : effectiveWorkspaceId && projectsQuery.isPending ? (
-              <p role="status">Loading projects…</p>
-            ) : projectsQuery.isError && !projectsData ? (
-              <p role="alert">
-                Could not load projects.{" "}
-                <button
-                  type="button"
-                  className="underline"
-                  onClick={() => void projectsQuery.refetch()}
-                >
-                  Retry
-                </button>
-              </p>
-            ) : (
-              <ProjectsTable
-                projects={filteredProjects}
-                isArchived={isArchivedView}
-                currentUserRole={activeWorkspace?.role || "member"}
-                onSelectProject={handleSelectProject}
-                onRenameProject={
-                  isOwnerOrAdmin
-                    ? (id, name) => openRename({ kind: "project", id, name })
-                    : undefined
-                }
-                onDeleteProject={
-                  isOwnerOrAdmin ? handleDeleteProject : undefined
-                }
-                onOpenNewProjectModal={
-                  isOwnerOrAdmin
-                    ? () => setIsCreateProjectModalOpen(true)
-                    : undefined
-                }
-                workspaceId={effectiveWorkspaceId}
-              />
+                {/* "Create a Blank File" Hero Card on Project Page (§13.2) */}
+                {canCreateInProject && (
+                  <CreateBlankCard
+                    title="New Canvas"
+                    subtitle="Infinite drafting canvas & specs"
+                    tag="BLANK CANVAS"
+                    punchedHoles={true}
+                    onClick={() => setIsNewFileModalOpen(true)}
+                  />
+                )}
+
+                {/* Section Header: [01] PROJECT FILES • 4 ITEMS --- sparks */}
+                <div className="py-2">
+                  <div className="section-head flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="px-1.5 py-0.5 bg-[#E9FFA3] text-black border border-black font-mono text-xs font-bold rounded-[2px]">
+                        {selectedProject
+                          ? String(filteredAndSortedFiles.length).padStart(
+                              2,
+                              "0",
+                            )
+                          : String(filteredProjects.length).padStart(2, "0")}
+                      </span>
+                      <span className="font-mono font-bold text-xs uppercase tracking-[0.5px] text-black dark:text-white">
+                        {selectedProject
+                          ? `PROJECT FILES • ${filteredAndSortedFiles.length} ${filteredAndSortedFiles.length === 1 ? "ITEM" : "ITEMS"}`
+                          : isArchivedView
+                            ? "ARCHIVED DIRECTORY • SOFT-DELETED PROJECTS"
+                            : "PROJECTS DIRECTORY • ACTIVE REPOSITORY"}
+                      </span>
+                    </div>
+
+                    <div className="rule flex-1 border-t-[1.5px] border-dashed border-[#DAD1C5] dark:border-white/20" />
+
+                    {!selectedProject && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono font-bold text-xs text-black/80 dark:text-white/80 uppercase tracking-[0.35px]">
+                          {isArchivedView
+                            ? `${String(filteredProjects.length).padStart(2, "0")} / ${String(archivedProjects.length).padStart(2, "0")} ARCHIVED`
+                            : `${String(filteredProjects.length).padStart(2, "0")} / ${String(activeProjects.length).padStart(2, "0")} PROJECTS`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 3 Doodle Spark Rays on the Right (§13.3) */}
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      stroke="#000"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className="text-black dark:text-white shrink-0"
+                      aria-hidden="true"
+                    >
+                      <line x1="4" y1="4" x2="16" y2="1" />
+                      <line x1="2" y1="10" x2="18" y2="10" />
+                      <line x1="4" y1="16" x2="16" y2="19" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* If viewing a project, render FilesTable. If on Dashboard, render ProjectsTable */}
+                {selectedProject ? (
+                  canvasList.isPending ? (
+                    <p role="status">Loading canvases…</p>
+                  ) : canvasList.isError ? (
+                    <p role="alert">
+                      Could not load canvases.{" "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => void canvasList.refetch()}
+                      >
+                        Retry
+                      </button>
+                    </p>
+                  ) : (
+                    <FilesTable
+                      key={selectedProjectId}
+                      files={filteredAndSortedFiles}
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      onCanvasDeleted={
+                        canManageCanvases ? handleCanvasDeleted : undefined
+                      }
+                      onRenameCanvas={
+                        canManageCanvases
+                          ? ({ id, name }) =>
+                              openRename({ kind: "canvas", id, name })
+                          : undefined
+                      }
+                      onOpenNewFileModal={
+                        canCreateInProject
+                          ? () => setIsNewFileModalOpen(true)
+                          : undefined
+                      }
+                    />
+                  )
+                ) : effectiveWorkspaceId && projectsQuery.isPending ? (
+                  <p role="status">Loading projects…</p>
+                ) : projectsQuery.isError && !projectsData ? (
+                  <p role="alert">
+                    Could not load projects.{" "}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => void projectsQuery.refetch()}
+                    >
+                      Retry
+                    </button>
+                  </p>
+                ) : (
+                  <ProjectsTable
+                    projects={filteredProjects}
+                    isArchived={isArchivedView}
+                    currentUserRole={activeWorkspace?.role || "member"}
+                    onSelectProject={handleSelectProject}
+                    onRenameProject={
+                      isOwnerOrAdmin
+                        ? (id, name) =>
+                            openRename({ kind: "project", id, name })
+                        : undefined
+                    }
+                    onArchiveProject={
+                      isOwnerOrAdmin ? handleArchiveProject : undefined
+                    }
+                    onPermanentlyDeleteProject={
+                      activeWorkspace?.role === "owner"
+                        ? handlePermanentlyDeleteProject
+                        : undefined
+                    }
+                    onOpenNewProjectModal={
+                      isOwnerOrAdmin
+                        ? () => setIsCreateProjectModalOpen(true)
+                        : undefined
+                    }
+                    workspaceId={effectiveWorkspaceId}
+                  />
+                )}
+              </>
             )}
           </div>
         </main>

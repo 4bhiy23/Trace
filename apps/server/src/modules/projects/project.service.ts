@@ -1,5 +1,9 @@
-import { canEditProject, type WorkspaceRole } from "@trace/shared";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import {
+  getProjectAccess,
+  type ProjectAccess,
+  type WorkspaceRole,
+} from "@trace/shared";
+import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import {
   canvas,
@@ -29,6 +33,7 @@ export async function createProject(
   workspaceId: string,
   name: string,
   actorId: string,
+  access: ProjectAccess,
 ) {
   return db.transaction(async (transaction) => {
     const [created] = await transaction
@@ -38,7 +43,7 @@ export async function createProject(
     await transaction
       .insert(workspaceAudit)
       .values(audit(workspaceId, actorId, "project.created", created.id));
-    return { ...created, access: "editor" as const };
+    return { ...created, access };
   });
 }
 
@@ -70,7 +75,7 @@ export async function listProjects(
   return rows.map(({ project: item, editorId, canvasCount }) => ({
     ...item,
     canvasCount,
-    access: canEditProject(role, editorId != null) ? "editor" : "viewer",
+    access: getProjectAccess(role, editorId != null),
   }));
 }
 
@@ -83,6 +88,7 @@ export async function updateProject(
   workspaceId: string,
   name: string,
   actorId: string,
+  access: ProjectAccess,
 ) {
   return db.transaction(async (transaction) => {
     const [updated] = await transaction
@@ -94,7 +100,7 @@ export async function updateProject(
     await transaction
       .insert(workspaceAudit)
       .values(audit(workspaceId, actorId, "project.updated", projectId));
-    return { ...updated, access: "editor" as const };
+    return { ...updated, access };
   });
 }
 
@@ -111,12 +117,59 @@ export async function archiveProject(
     const [archived] = await transaction
       .update(project)
       .set({ archivedAt: new Date() })
-      .where(eq(project.id, projectId))
+      .where(and(eq(project.id, projectId), isNull(project.archivedAt)))
       .returning({ id: project.id });
     if (!archived) throw new HttpError(404, "NOT_FOUND", "Project not found");
     await transaction
       .insert(workspaceAudit)
       .values(audit(workspaceId, actorId, "project.archived", projectId));
+  });
+}
+
+/**
+ * Permanently deletes an archived project. The owner check is repeated here so this
+ * destructive operation remains protected if it is called outside the route layer.
+ */
+export async function permanentlyDeleteArchivedProject(
+  projectId: string,
+  workspaceId: string,
+  actorId: string,
+) {
+  await db.transaction(async (transaction) => {
+    const [actor] = await transaction
+      .select({ role: workspaceMember.role })
+      .from(workspaceMember)
+      .where(
+        and(
+          eq(workspaceMember.workspaceId, workspaceId),
+          eq(workspaceMember.userId, actorId),
+        ),
+      )
+      .for("update");
+    if (actor?.role !== "owner") {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Only workspace owners can permanently delete projects",
+      );
+    }
+
+    const [deleted] = await transaction
+      .delete(project)
+      .where(
+        and(
+          eq(project.id, projectId),
+          eq(project.workspaceId, workspaceId),
+          isNotNull(project.archivedAt),
+        ),
+      )
+      .returning({ id: project.id });
+    if (!deleted) {
+      throw new HttpError(404, "NOT_FOUND", "Archived project not found");
+    }
+    await transaction
+      .insert(workspaceAudit)
+      .values(audit(workspaceId, actorId, "project.deleted", projectId));
   });
 }
 

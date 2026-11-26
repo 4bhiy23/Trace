@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import {
   apiPaths,
+  getProjectAccess,
   projectCreateSchema,
   projectEditorCreateSchema,
   projectUpdateSchema,
@@ -21,6 +22,7 @@ import {
   archiveProject,
   createProject,
   listProjectEditors,
+  permanentlyDeleteArchivedProject,
   listProjects,
   removeProjectEditor,
   updateProject,
@@ -52,13 +54,15 @@ export function registerProjectRoutes(app: Express) {
     requireWorkspaceRole("owner", "admin"),
     async (request, response) => {
       const input = projectCreateSchema.parse(request.body);
+      const workspace = getWorkspaceContext(response);
       response
         .status(201)
         .json(
           await createProject(
-            getWorkspaceContext(response).id,
+            workspace.id,
             input.name,
             getCurrentUser(response).id,
+            getProjectAccess(workspace.role, false),
           ),
         );
     },
@@ -84,6 +88,7 @@ export function registerProjectRoutes(app: Express) {
           project.workspaceId,
           input.name,
           getCurrentUser(response).id,
+          project.access,
         ),
       );
     },
@@ -96,6 +101,21 @@ export function registerProjectRoutes(app: Express) {
     async (_request, response) => {
       const project = getProjectContext(response);
       await archiveProject(
+        project.id,
+        project.workspaceId,
+        getCurrentUser(response).id,
+      );
+      response.status(204).send();
+    },
+  );
+
+  app.delete(
+    apiPaths.projectPermanentDelete,
+    requireAuth,
+    requireProjectAccess("manage"),
+    async (_request, response) => {
+      const project = getProjectContext(response);
+      await permanentlyDeleteArchivedProject(
         project.id,
         project.workspaceId,
         getCurrentUser(response).id,

@@ -31,7 +31,7 @@ export function CreateBlankCard({
         rings="none"
         tape="tl"
         tilt={punchedHoles ? 0 : -0.6}
-        className="w-full max-w-[580px]"
+        className="w-full max-w-145"
       >
         <div className="relative">
           <button
@@ -51,7 +51,7 @@ export function CreateBlankCard({
             <div className="flex items-center justify-between gap-4 w-full">
               {/* Left + Icon Tile (~56px, 2px ink border, shadow-btn) */}
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-black rounded-[4px] bg-[#E9FFA3] group-hover:bg-black group-hover:text-[#E9FFA3] text-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000000] transition-colors duration-150">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 border-2 border-black rounded-lg bg-brand-lime group-hover:bg-black group-hover:text-brand-lime text-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000000] transition-colors duration-150">
                   <Plus className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.6]" />
                 </div>
 
@@ -81,7 +81,7 @@ export function CreateBlankCard({
                   <path d="M 9 11 L 13 3" />
                 </svg>
 
-                <div className="w-8 h-8 sm:w-9 sm:h-9 border-2 border-black rounded-[2px] bg-white group-hover:bg-black group-hover:text-[#E9FFA3] text-black flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000000] transition-colors duration-150">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 border-2 border-black rounded-xs bg-white group-hover:bg-black group-hover:text-brand-lime text-black flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000000] transition-colors duration-150">
                   <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.4]" />
                 </div>
               </div>
@@ -94,7 +94,7 @@ export function CreateBlankCard({
         <div className="absolute left-[calc(100%+28px)] top-3.5 pointer-events-none select-none z-20 hidden sm:flex flex-col items-start">
           {/* Handwritten text */}
           <div
-            className="text-[23px] font-bold leading-[1.05] text-black dark:text-white -rotate-[16deg] tracking-wide"
+            className="text-[23px] font-bold leading-[1.05] text-black dark:text-white rotate-[-16deg] tracking-wide"
             style={{
               fontFamily: 'var(--font-handwriting, "Caveat", cursive)',
             }}

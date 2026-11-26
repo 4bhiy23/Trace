@@ -86,7 +86,7 @@ export function registerCanvasRoutes(app: Express, rooms: CanvasRooms) {
       response.status(201).json({
         ...created,
         workspaceId: project.workspaceId,
-        access: project.access,
+        access: "editor",
       });
     },
   );
@@ -96,7 +96,8 @@ export function registerCanvasRoutes(app: Express, rooms: CanvasRooms) {
     response.json({
       ...item,
       workspaceId: project.workspaceId,
-      access: project.archivedAt ? "viewer" : project.access,
+      access:
+        project.archivedAt || project.access === "viewer" ? "viewer" : "editor",
     });
   });
 
@@ -112,7 +113,7 @@ export function registerCanvasRoutes(app: Express, rooms: CanvasRooms) {
       response.json({
         ...updated,
         workspaceId: project.workspaceId,
-        access: project.access,
+        access: "editor",
       });
       return;
     }
@@ -134,7 +135,7 @@ export function registerCanvasRoutes(app: Express, rooms: CanvasRooms) {
     response.json({
       ...updated,
       workspaceId: project.workspaceId,
-      access: project.access,
+      access: "editor",
     });
   });
 

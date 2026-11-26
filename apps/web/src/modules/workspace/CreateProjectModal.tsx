@@ -290,7 +290,7 @@ export function CreateProjectModal({
 
       {/* Modal Notebook Wrapper */}
       <div
-        className="relative w-full max-w-[560px] my-6 select-none animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-140 my-6 select-none animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Tan under-sheet stack peeking out on right & bottom (§17.4) */}
@@ -318,7 +318,7 @@ export function CreateProjectModal({
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 {/* Lime Folder Box */}
-                <div className="w-12 h-12 border-2 border-black bg-[#E9FFA3] text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
+                <div className="w-12 h-12 border-2 border-black bg-brand-lime text-black flex items-center justify-center shrink-0 rounded-[3px] shadow-[2px_2px_0px_#000000]">
                   <FolderPlus className="w-6 h-6 stroke-[2.2]" />
                 </div>
 
@@ -356,7 +356,7 @@ export function CreateProjectModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="proj-rough-btn w-9 h-9 !p-0 flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
+                className="proj-rough-btn w-9 h-9 p-0! flex items-center justify-center cursor-pointer shrink-0 mt-0.5"
               >
                 <X className="w-5 h-5 stroke-[2.6] text-black" />
               </button>
@@ -400,7 +400,7 @@ export function CreateProjectModal({
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111]">
                     COLLABORATOR ACCESS
                   </span>
-                  <span className="font-mono text-[10.5px] font-bold text-black bg-[#ECE7E0] px-2 py-0.5 border border-black rounded-[2px]">
+                  <span className="font-mono text-[10.5px] font-bold text-black bg-brand-industrial-tan px-2 py-0.5 border border-black rounded-xs">
                     {members.length}{" "}
                     {members.length === 1 ? "member" : "members"}
                   </span>
@@ -443,7 +443,7 @@ export function CreateProjectModal({
                   <button
                     type="button"
                     onClick={() => handleAddMember()}
-                    className="h-9 px-4 text-xs font-mono font-bold bg-black text-white hover:bg-[#E9FFA3] hover:text-black border-2 border-black shadow-[2px_2px_0px_#000000] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:translate-x-0.5 active:translate-y-0.5 rounded-[2px]"
+                    className="h-9 px-4 text-xs font-mono font-bold bg-black text-white hover:bg-brand-lime hover:text-black border-2 border-black shadow-[2px_2px_0px_#000000] flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:translate-x-0.5 active:translate-y-0.5 rounded-xs"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>Add</span>
@@ -465,9 +465,9 @@ export function CreateProjectModal({
                     >
                       {/* Left: Icon & User info */}
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-[#E9FFA3] flex items-center justify-center shrink-0 font-brand-display text-xs font-bold">
+                        <div className="w-7 h-7 rounded-full border-2 border-black bg-black text-brand-lime flex items-center justify-center shrink-0 font-brand-display text-xs font-bold">
                           {member.isOwner ? (
-                            <Shield className="w-3.5 h-3.5 text-[#E9FFA3]" />
+                            <Shield className="w-3.5 h-3.5 text-brand-lime" />
                           ) : (
                             (member.name || member.email)[0].toUpperCase()
                           )}
@@ -485,7 +485,7 @@ export function CreateProjectModal({
                       {/* Right: Actions or Owner Badge */}
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         {member.isOwner ? (
-                          <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-black bg-[#E9FFA3] px-2 py-0.5 border border-black rounded-[2px]">
+                          <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-black bg-brand-lime px-2 py-0.5 border border-black rounded-xs">
                             OWNER
                           </span>
                         ) : (
@@ -498,7 +498,7 @@ export function CreateProjectModal({
                                   e.target.value as Role,
                                 )
                               }
-                              className="h-6 px-1.5 text-[11px] bg-white border border-black text-black font-mono cursor-pointer outline-none rounded-[2px]"
+                              className="h-6 px-1.5 text-[11px] bg-white border border-black text-black font-mono cursor-pointer outline-none rounded-xs"
                             >
                               <option value="editor">Editor</option>
                               <option value="viewer">Viewer</option>
@@ -509,7 +509,7 @@ export function CreateProjectModal({
                               type="button"
                               onClick={() => handleMakeOwner(member.email)}
                               title="Make Owner"
-                              className="h-6 w-6 border border-black bg-white hover:bg-[#E9FFA3] text-black flex items-center justify-center transition-colors cursor-pointer rounded-[2px]"
+                              className="h-6 w-6 border border-black bg-white hover:bg-brand-lime text-black flex items-center justify-center transition-colors cursor-pointer rounded-xs"
                             >
                               <Crown className="w-3.5 h-3.5 stroke-[2.2]" />
                             </button>
@@ -518,7 +518,7 @@ export function CreateProjectModal({
                               type="button"
                               onClick={() => handleRemoveMember(member.email)}
                               title="Remove access"
-                              className="h-6 w-6 border border-black bg-white hover:bg-red-500 text-black hover:text-white flex items-center justify-center transition-colors cursor-pointer rounded-[2px]"
+                              className="h-6 w-6 border border-black bg-white hover:bg-red-500 text-black hover:text-white flex items-center justify-center transition-colors cursor-pointer rounded-xs"
                             >
                               <Trash2 className="w-3.5 h-3.5 stroke-[2.2]" />
                             </button>
